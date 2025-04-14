@@ -15,7 +15,7 @@ const List = () => {
     const fetchProducts = async () => {
       try {
         const atoken = localStorage.getItem('atoken'); 
-        const response = await axios.get('https://ecomm-backend-livid.vercel.app/api/product/list_products', {
+        const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/product/list_products', {
           headers: {
             Authorization: `Bearer ${atoken}`,
           },
@@ -42,7 +42,7 @@ const List = () => {
   const handleDelete = async (productId) => {
     try {
       const atoken = localStorage.getItem('atoken');
-      const response = await axios.delete(`https://ecomm-backend-livid.vercel.app/api/product/delete_product/${productId}`, {
+      const response = await axios.delete(`https://ecommerce-rho-hazel.vercel.app/api/product/delete_product/${productId}`, {
         headers: {
           Authorization: `Bearer ${atoken}`,
         },
@@ -76,7 +76,7 @@ const List = () => {
   const handleEditSubmit = async () => {
     try {
       const atoken = localStorage.getItem('atoken');
-      const response = await axios.put(`https://ecomm-backend-livid.vercel.app/api/product/update_product/${editingProduct._id}`, editFormData, {
+      const response = await axios.put(`https://ecommerce-rho-hazel.vercel.app/api/product/update_product/${editingProduct._id}`, editFormData, {
         headers: {
           Authorization: `Bearer ${atoken}`,
         },
