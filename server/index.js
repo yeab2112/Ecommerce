@@ -27,7 +27,7 @@ app.use(limiter);
 
 const allowedOrigins = [
   'https://ecommerce-client-lake.vercel.app',
-  'https://admin-ecomm-six.vercel.app',
+  'https://ecommerce-5ulb.vercel.app/',
   'http://localhost:3000',
   'http://localhost:3001'
 ];
