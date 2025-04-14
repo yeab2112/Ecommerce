@@ -27,10 +27,11 @@ app.use(limiter);
 
 const allowedOrigins = [
   'https://ecommerce-client-lake.vercel.app',
-  'https://ecommerce-5ulb.vercel.app/',
+  'https://ecommerce-5ulb.vercel.app', // Removed trailing slash
   'http://localhost:3000',
   'http://localhost:3001'
 ];
+
 
 const corsOptions = {
   origin: function (origin, callback) {
