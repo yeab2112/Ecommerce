@@ -22,16 +22,16 @@ function ShopContextProvider({ children }) {
     setLoading(true);
     try {
       const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/product/list_products');
-      
-      console.log('API Response:', response.data); // Log response to inspect structure
-      
+  
+      console.log('API Response:', response.data);
+  
       if (response.data.success) {
         setProducts(response.data.products);
       } else {
         throw new Error(response.data.message || 'Failed to fetch products');
       }
     } catch (err) {
-      console.error('Error fetching products:', err); // Log full error object for debugging
+      console.error('Error fetching products:', err);
       setError(err.message);
       toast.error(err.message);
     } finally {
