@@ -21,7 +21,7 @@ function ShopContextProvider({ children }) {
   const getProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get('https://ecomm-backend-livid.vercel.app/api/product/list_products');
+      const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/product/list_products');
       
       console.log('API Response:', response.data); // Log response to inspect structure
       
@@ -47,7 +47,7 @@ function ShopContextProvider({ children }) {
     }
 
     try {
-      const response = await axios.get('https://ecomm-backend-livid.vercel.app/api/cart/get', {
+      const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/cart/get', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -117,7 +117,7 @@ function ShopContextProvider({ children }) {
   
     try {
       const response = await axios.post(
-        'https://ecomm-backend-livid.vercel.app/api/cart/add',
+        'https://ecommerce-rho-hazel.vercel.app/api/cart/add',
         { productId, size: normalizedSize },
         {
           headers: {
@@ -182,7 +182,7 @@ function ShopContextProvider({ children }) {
       }
   
       const response = await axios.put(
-        'https://ecomm-backend-livid.vercel.app/api/cart/update',
+        'https://ecommerce-rho-hazel.vercel.app/api/cart/update',
         { 
           productId, 
           size: normalizedSize, 

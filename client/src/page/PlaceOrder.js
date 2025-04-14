@@ -35,7 +35,7 @@ function PlaceOrder() {
     setIsProcessingPayment(true);
     try {
       const response = await axios.post(
-        'https://ecomm-backend-livid.vercel.app/api/payment/chapa',
+        'https://ecommerce-rho-hazel.vercel.app/api/payment/chapa',
         {
           amount: finalTotal,
           currency: 'ETB',
@@ -100,7 +100,7 @@ function PlaceOrder() {
       };
 
       const response = await axios.post(
-        'https://ecomm-backend-livid.vercel.app/api/orders',
+        'https://ecommerce-rho-hazel.vercel.app/api/orders',
         orderData,
         {
           headers: {

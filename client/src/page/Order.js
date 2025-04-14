@@ -20,7 +20,7 @@ function OrderConfirmation() {
       }
 
       try {
-        const response = await axios.get('https://ecomm-backend-livid.vercel.app/api/orders/user', {
+        const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/orders/user', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -53,7 +53,7 @@ function OrderConfirmation() {
     setLoadingOrders(prev => ({ ...prev, [orderId]: true }));
 
     try {
-      const response = await axios.get(`https://ecomm-backend-livid.vercel.app/api/orders/${orderId}/tracking`, {
+      const response = await axios.get(`https://ecommerce-rho-hazel.vercel.app/api/orders/${orderId}/tracking`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
