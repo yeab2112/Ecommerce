@@ -14,7 +14,7 @@ const app = express();
 
 // Proper CORS setup
 const allowedOrigins = [
-  'https://ecommerce-client-lake.vercel.app/',
+  'https://ecommerce-client-lake.vercel.app',
   'https://admin-ecomm-six.vercel.app',
   'http://localhost:3000', // For local 
   'http://localhost:3001' // For local development
