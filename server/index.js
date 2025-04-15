@@ -66,7 +66,7 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     status: 'API Online',
-    message: 'Welcome to Yeabsi E-Commerce API',
+    message: 'Welcome to Yeabsi Ecommerce API',
     version: '1.0.0',
     endpoints: {
       users: '/api/user',
@@ -76,7 +76,7 @@ app.get('/', (req, res) => {
       payment: '/api/payment',
       health: '/health'
     },
-    docs: 'https://github.com/yeab2112/Yeabsi_e/docs'
+    docs: 'https://github.com/yeab2112/Ecommerce/docs'
   });
 });
 
