@@ -1,33 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { asset } from '../asset/asset';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import React, { useState } from 'react';
+import { asset } from '../asset/asset'; // Import assets (e.g., default image)
+import { ToastContainer, toast } from 'react-toastify'; // Import Toastify
+import 'react-toastify/dist/ReactToastify.css'; // Import Toastify styles
 
 function Add() {
+  // State to manage form inputs
   const [product, setProduct] = useState({
     name: '',
     description: '',
     category: '',
     price: '',
-    sizes: [],
+    sizes: [], // Array of sizes
     bestSeller: false,
+    images: [], // List of uploaded images
   });
 
-  // Track 4 separate image files (null if not uploaded)
-  const [images, setImages] = useState([null, null, null, null]);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0); // Track upload progress
+  const [error, setError] = useState(''); // Track error messages
+  const [isSubmitting, setIsSubmitting] = useState(false); // Track form submission state
 
-  // Clean up object URLs to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      images.forEach((img) => {
-        if (img) URL.revokeObjectURL(img.preview);
-      });
-    };
-  }, [images]);
-
+  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setProduct({
@@ -36,66 +28,86 @@ function Add() {
     });
   };
 
+  // Handle size selection
   const handleSizeChange = (e) => {
     const { value, checked } = e.target;
+    let updatedSizes = [...product.sizes];
+
+    if (checked) {
+      updatedSizes.push(value); // Add size to the array
+    } else {
+      updatedSizes = updatedSizes.filter((size) => size !== value); // Remove size from the array
+    }
+
     setProduct({
       ...product,
-      sizes: checked
-        ? [...product.sizes, value]
-        : product.sizes.filter((size) => size !== value),
+      sizes: updatedSizes,
     });
   };
 
-  const handleImageUpload = (e, index) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Handle image upload
+  const handleImageUpload = async (e, index) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      const file = files[0];
 
-    // Validate file type & size
-    if (!file.type.startsWith('image/')) {
-      setError('Only image files are allowed.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB.');
-      return;
-    }
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please upload an image file.');
+        return;
+      }
 
-    // Update image with preview URL
-    const updatedImages = [...images];
-    updatedImages[index] = {
-      file,
-      preview: URL.createObjectURL(file),
-    };
-    setImages(updatedImages);
-    setError('');
+      // Validate file size (e.g., 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File size must be less than 5MB.');
+        return;
+      }
+
+      const updatedImages = [...product.images];
+
+      // Simulate upload progress
+      const interval = setInterval(() => {
+        setUploadProgress((prev) => (prev < 90 ? prev + 10 : prev));
+      }, 100);
+
+      // Simulate API call for image upload
+      setTimeout(() => {
+        clearInterval(interval);
+        setUploadProgress(100);
+        updatedImages[index] = file; // Store the file object for later submission
+        setProduct({
+          ...product,
+          images: updatedImages,
+        });
+        setUploadProgress(0);
+        setError('');
+      }, 1000);
+    }
   };
 
+  // Handle remove image
   const handleRemoveImage = (index) => {
-    const updatedImages = [...images];
-    if (updatedImages[index]?.preview) {
-      URL.revokeObjectURL(updatedImages[index].preview);
-    }
-    updatedImages[index] = null;
-    setImages(updatedImages);
+    const updatedImages = [...product.images];
+    updatedImages[index] = null; // Remove the image
+    setProduct({
+      ...product,
+      images: updatedImages,
+    });
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
-
-    // Validate at least 1 image
-    if (images.every((img) => !img)) {
-      setError('At least one image is required.');
-      setIsSubmitting(false);
-      return;
-    }
 
     try {
       const atoken = localStorage.getItem('atoken');
       if (!atoken) throw new Error('Authentication required');
 
       const formData = new FormData();
+      
+      // Append all fields to formData
       formData.append('name', product.name);
       formData.append('description', product.description);
       formData.append('category', product.category);
@@ -103,24 +115,23 @@ function Add() {
       formData.append('bestSeller', product.bestSeller);
       formData.append('sizes', JSON.stringify(product.sizes));
 
-      // Append images with explicit field names
-      images.forEach((img, index) => {
-        if (img?.file) {
-          formData.append(`image${index + 1}`, img.file); // image1, image2, etc.
-        }
+      // Append all images
+      product.images.forEach((image, index) => {
+        if (image) formData.append(`image${index + 1}`, image); 
       });
 
       const response = await fetch('https://ecommerce-rho-hazel.vercel.app/api/product/add_products', {
         method: 'POST',
         body: formData,
         headers: {
-          Authorization: `Bearer ${atoken}`,
+          'Authorization': `Bearer ${atoken}`,
+          // Do not set 'Content-Type' explicitly when using FormData
         },
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to add product');
+        throw new Error(errorData.error || 'Failed to add product');
       }
 
       // Reset form on success
@@ -131,12 +142,15 @@ function Add() {
         price: '',
         sizes: [],
         bestSeller: false,
+        images: [], // Reset images after submission
       });
-      setImages([null, null, null, null]);
+
+      // Show success notification
       toast.success('Product added successfully!');
     } catch (err) {
       setError(err.message);
-      toast.error(err.message);
+      // Show error notification
+      toast.error(err.message || 'An error occurred while adding the product');
     } finally {
       setIsSubmitting(false);
     }
@@ -145,16 +159,17 @@ function Add() {
   return (
     <div className="max-w-3xl mx-auto p-8 bg-white shadow-lg rounded-lg">
       <h2 className="text-2xl font-bold mb-6 text-center">Add New Product</h2>
+
+      {/* Error Message */}
       {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
 
-      {/* Image Upload */}
+      {/* Image Upload Fields */}
       <div className="mb-6 text-center">
-        <label className="block text-sm font-medium text-gray-700 mb-4">
-          Upload Images (Max 4)
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-4">Upload Images (Max 4)</label>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {images.map((img, index) => (
-            <div key={index} className="relative">
+          {[0, 1, 2, 3].map((index) => (
+            <div key={index} className="flex flex-col items-center justify-center space-y-2 relative">
+              {/* Hidden file input */}
               <input
                 type="file"
                 id={`file-input-${index}`}
@@ -162,50 +177,152 @@ function Add() {
                 onChange={(e) => handleImageUpload(e, index)}
                 className="hidden"
               />
+              {/* Label (image preview) */}
               <label
                 htmlFor={`file-input-${index}`}
-                className="cursor-pointer w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden"
+                className="cursor-pointer w-24 h-24 bg-gray-300 rounded-lg flex items-center justify-center overflow-hidden"
               >
-                {img ? (
+                {product.images[index] ? (
                   <img
-                    src={img.preview}
-                    alt={`Preview ${index + 1}`}
+                    src={URL.createObjectURL(product.images[index])}
+                    alt={`Product ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <img
-                    src={asset.upload}
-                    alt="Upload placeholder"
-                    className="w-12 h-12 opacity-50"
-                  />
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+                    <img
+                      src={asset.upload || 'default-image-path.jpg'}
+                      alt="Upload"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 )}
               </label>
-              {img && (
+              {/* Remove button */}
+              {product.images[index] && (
                 <button
                   type="button"
                   onClick={() => handleRemoveImage(index)}
                   className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                 >
-                  ×
+                  &times;
                 </button>
               )}
             </div>
           ))}
         </div>
+        {/* Upload Progress */}
+        {uploadProgress > 0 && (
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
+            <div
+              className="bg-indigo-600 h-2 rounded-full"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+        )}
       </div>
 
-      {/* Form Fields (unchanged) */}
+      {/* Product Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* ... (keep existing form fields) ... */}
+        {/* Product Name */}
+        <div className="form-group">
+          <label className="block text-sm font-medium text-gray-700">Product Name</label>
+          <input
+            type="text"
+            name="name"
+            value={product.name}
+            onChange={handleInputChange}
+            required
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        {/* Product Description */}
+        <div className="form-group">
+          <label className="block text-sm font-medium text-gray-700">Product Description</label>
+          <textarea
+            name="description"
+            value={product.description}
+            onChange={handleInputChange}
+            required
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        {/* Product Category */}
+        <div className="form-group">
+          <label className="block text-sm font-medium text-gray-700">Product Category</label>
+          <select
+            name="category"
+            value={product.category}
+            onChange={handleInputChange}
+            required
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Select Category</option>
+            <option value="Women">Women</option>
+            <option value="Men">Men</option>
+            <option value="Kids">Kids</option>
+          </select>
+        </div>
+
+        {/* Product Price */}
+        <div className="form-group">
+          <label className="block text-sm font-medium text-gray-700">Product Price</label>
+          <input
+            type="number"
+            name="price"
+            value={product.price}
+            onChange={handleInputChange}
+            required
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        {/* Product Sizes */}
+        <div className="form-group">
+          <label className="block text-sm font-medium text-gray-700">Product Sizes</label>
+          <div className="flex space-x-4">
+            {['S', 'M', 'L'].map((size) => (
+              <label key={size} className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="sizes"
+                  value={size}
+                  checked={product.sizes.includes(size)}
+                  onChange={handleSizeChange}
+                  className="mr-2"
+                />
+                {size}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Best Seller Checkbox */}
+        <div className="form-group flex items-center">
+          <input
+            type="checkbox"
+            name="bestSeller"
+            checked={product.bestSeller}
+            onChange={handleInputChange}
+            className="mr-2"
+          />
+          <label className="text-sm font-medium text-gray-700">Best Seller</label>
+        </div>
+
+        {/* Add Button */}
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          {isSubmitting ? 'Adding...' : 'Add Product'}
+          {isSubmitting ? 'Adding Product...' : 'Add Product'}
         </button>
       </form>
-      <ToastContainer position="top-right" autoClose={5000} />
+
+      {/* Toastify container */}
+      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop />
     </div>
   );
 }
