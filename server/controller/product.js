@@ -1,4 +1,3 @@
-// controllers/productController.js
 import fs from 'fs';
 import { Product } from "../moduls/product.js";
 import { v2 as cloudinary } from 'cloudinary';
