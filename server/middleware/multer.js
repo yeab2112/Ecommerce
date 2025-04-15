@@ -1,11 +1,10 @@
 // middlewares/multer.js
 import multer from 'multer';
-import path from 'path';
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
   destination: (req, file, callback) => {
-    callback(null, './uploads'); // ✅ fixed typo here
+    callback(null, './uploads'); // 
   },
   filename: (req, file, callback) => {
     callback(null, `${Date.now()}_${file.originalname}`);
