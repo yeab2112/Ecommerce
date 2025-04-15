@@ -16,7 +16,7 @@ const productRouter = express.Router();
 
 // Add a new product (Admin only) with image upload
 // POST request for adding a product, uses admin auth and file upload middlewares
-productRouter.post('/add-product',upload.fields([
+productRouter.post('/add_products',upload.fields([
     { name: 'image1', maxCount: 1 },
     { name: 'image2', maxCount: 1 },
     { name: 'image3', maxCount: 1 },
@@ -24,7 +24,6 @@ productRouter.post('/add-product',upload.fields([
   ]),
   AddProducts
 );;
-
 // List all products
 productRouter.get('/list_products', ListProducts);  // Adjusted route to follow REST conventions
 
