@@ -14,7 +14,7 @@ const ListProducts = async (req, res) => {
 
 // Add new product with image upload to Cloudinary
 
-export const AddProducts = async (req, res) => {
+const AddProducts = async (req, res) => {
   try {
     const { name, price, description, category, bestSeller, sizes } = req.body;
     const files = req.files;
