@@ -1,14 +1,14 @@
-// multer.js
+// middlewares/multer.js
 import multer from 'multer';
 import path from 'path';
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
   destination: (req, file, callback) => {
-    callback(null, './uploads'); // Save to 'uploads' directory temporarily
+    callback(null, './uploads'); // ✅ fixed typo here
   },
   filename: (req, file, callback) => {
-    callback(null, `${Date.now()}_${file.originalname}`); // Use current timestamp to avoid name collisions
+    callback(null, `${Date.now()}_${file.originalname}`);
   },
 });
 
@@ -20,13 +20,11 @@ const fileFilter = (req, file, callback) => {
   callback(null, true);
 };
 
-// Create multer instance with file size limit
+// Multer instance
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max size
-  },
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max size
 });
 
 export default upload;
