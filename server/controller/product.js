@@ -14,24 +14,24 @@ cloudinary.config({
 const AddProducts = async (req, res) => {
   try {
     const { name, price, description, category, bestSeller, sizes } = req.body;
+    const files = req.files; // This is now an array of files
 
-    const files = req.files;
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, message: "At least one image is required." });
     }
 
+    // Process all uploaded images
     const imageUrls = [];
-
     for (const file of files) {
       try {
-        const result = await cloudinary.uploader.upload(file.path, {
-          resource_type: 'image',
+        const result = await cloudinary.uploader.upload(file.path, { 
+          resource_type: "image" 
         });
-        fs.unlinkSync(file.path); // delete local file
+        fs.unlinkSync(file.path); // Delete temp file
         imageUrls.push(result.secure_url);
       } catch (uploadError) {
         console.error('Cloudinary upload error:', uploadError);
-        continue;
+        // Skip failed uploads but continue with others
       }
     }
 
@@ -39,9 +39,16 @@ const AddProducts = async (req, res) => {
       return res.status(400).json({ success: false, message: "Failed to upload any images." });
     }
 
-    const parsedSizes = Array.isArray(sizes)
-      ? sizes
-      : (typeof sizes === 'string' ? JSON.parse(sizes) : []);
+    // Parse sizes (frontend sends as JSON string)
+    let parsedSizes;
+    try {
+      parsedSizes = JSON.parse(sizes);
+      if (!Array.isArray(parsedSizes)) {
+        parsedSizes = ['M']; // Default size if not an array
+      }
+    } catch (e) {
+      parsedSizes = ['M']; // Default size if parsing fails
+    }
 
     const newProduct = new Product({
       name,
@@ -60,15 +67,15 @@ const AddProducts = async (req, res) => {
       message: "Product added successfully",
       product: newProduct,
     });
+
   } catch (error) {
     console.error('Error adding product:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Error adding product',
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Error adding product' 
     });
   }
 };
-
 // List all products
 const ListProducts = async (req, res) => {
   try {

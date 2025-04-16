@@ -105,20 +105,19 @@ function Add() {
       const atoken = localStorage.getItem('atoken');
       if (!atoken) throw new Error('Authentication required');
 
-      const formData = new FormData();
-      
-      // Append all fields to formData
-      formData.append('name', product.name);
-      formData.append('description', product.description);
-      formData.append('category', product.category);
-      formData.append('price', product.price);
-      formData.append('bestSeller', product.bestSeller);
-      formData.append('sizes', JSON.stringify(product.sizes));
+      // In handleSubmit function:
+const formData = new FormData();
+formData.append('name', product.name);
+formData.append('description', product.description);
+formData.append('category', product.category);
+formData.append('price', product.price);
+formData.append('bestSeller', product.bestSeller);
+formData.append('sizes', JSON.stringify(product.sizes));
 
-      // Append all images
-      product.images.forEach((image, index) => {
-        if (image) formData.append(`image${index + 1}`, image); 
-      });
+// Append images with the same field name 'images'
+product.images.forEach((image) => {
+  if (image) formData.append('images', image);
+});
 
       const response = await fetch('https://ecommerce-rho-hazel.vercel.app/api/product/add_products', {
         method: 'POST',

@@ -19,8 +19,8 @@ const productRouter = express.Router();
 productRouter.post(
   '/add_products',
   authoAdmin,
-  upload.any(), // Accept any files with any field names
-  AddProducts
+  upload.array('images', 4), // Accept up to 4 files with field name 'images'
+  AddProducts  
 );
 // List all products
 productRouter.get('/list_products', ListProducts);  // Adjusted route to follow REST conventions
