@@ -12,38 +12,41 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET ,
 });
 
- const AddProducts = async (req, res) => {
+const AddProducts = async (req, res) => {
   try {
     const { name, price, description, category, bestSeller, sizes } = req.body;
 
-    const image1 = req.files?.image1?.[0];
-    const image2 = req.files?.image2?.[0];
-    const image3 = req.files?.image3?.[0];
-    const image4 = req.files?.image4?.[0];
-
-    // Validate required fields
-    if (!name || !price || !description || !category) {
-      return res.status(400).json({ success: false, message: "Name, price, description, and category are required." });
-    }
-
-    // At least one image must be uploaded
-    const images = [image1, image2, image3, image4].filter(Boolean);
-    if (images.length === 0) {
+    // Get all uploaded files
+    const files = req.files;
+    if (!files || Object.keys(files).length === 0) {
       return res.status(400).json({ success: false, message: "At least one image is required." });
     }
 
-    // Upload images to Cloudinary and delete temp files
-    const imageUrls = await Promise.all(images.map(async (img) => {
-      try {
-        const result = await cloudinary.uploader.upload(img.path, { resource_type: "image" });
-        fs.unlinkSync(img.path); // Delete temp file after upload
-        return result.secure_url;
-      } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
-        throw new Error('Error uploading image to Cloudinary');
+    // Process all uploaded images
+    const imageUrls = [];
+    for (const fieldName in files) {
+      const fileArray = files[fieldName];
+      if (fileArray && fileArray.length > 0) {
+        const file = fileArray[0];
+        try {
+          const result = await cloudinary.uploader.upload(file.path, { 
+            resource_type: "image" 
+          });
+          fs.unlinkSync(file.path); // Delete temp file
+          imageUrls.push(result.secure_url);
+        } catch (uploadError) {
+          console.error('Cloudinary upload error:', uploadError);
+          // Don't fail the whole request if one image fails
+          continue;
+        }
       }
-    }));
+    }
 
+    if (imageUrls.length === 0) {
+      return res.status(400).json({ success: false, message: "Failed to upload any images." });
+    }
+
+    // Rest of your controller logic...
     const parsedSizes = Array.isArray(sizes) ? sizes : (sizes ? [sizes] : ['M']);
 
     const newProduct = new Product({
@@ -54,7 +57,6 @@ cloudinary.config({
       sizes: parsedSizes,
       description,
       category,
-      createdAt: new Date(),
     });
 
     await newProduct.save();
@@ -67,7 +69,10 @@ cloudinary.config({
 
   } catch (error) {
     console.error('Error adding product:', error);
-    return res.status(500).json({ success: false, message: 'Error adding product. Please try again later.' });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Error adding product' 
+    });
   }
 };
 

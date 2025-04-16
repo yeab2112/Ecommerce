@@ -16,19 +16,16 @@ const productRouter = express.Router();
 
 // Add a new product (Admin only) with image upload
 // POST request for adding a product, uses admin auth and file upload middlewares
-productRouter.post('/add_products',authoAdmin,upload.fields([
-    { name: 'image1', maxCount: 1 },
-    { name: 'image2', maxCount: 1 },
-    { name: 'image3', maxCount: 1 },
-    { name: 'image4', maxCount: 1 },
-  ]),
+productRouter.post(
+  '/add_products',
+  authoAdmin,
+  upload.any(), // Accept any files with any field names
   AddProducts
 );
 // List all products
 productRouter.get('/list_products', ListProducts);  // Adjusted route to follow REST conventions
 
-// Delete a product by ID (Admin only)
-// Route for deleting a product
+
 // Ensure that you are using the DELETE method, not GET
 productRouter.delete('/delete_product/:productId', authoAdmin,deleteProduct);
 
