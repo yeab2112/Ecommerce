@@ -5,40 +5,33 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ,
-  api_key: process.env.CLOUDINARY_API_KEY ,
-  api_secret: process.env.CLOUDINARY_API_SECRET ,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 const AddProducts = async (req, res) => {
   try {
     const { name, price, description, category, bestSeller, sizes } = req.body;
 
-    // Get all uploaded files
     const files = req.files;
-    if (!files || Object.keys(files).length === 0) {
+    if (!files || files.length === 0) {
       return res.status(400).json({ success: false, message: "At least one image is required." });
     }
 
-    // Process all uploaded images
     const imageUrls = [];
-    for (const fieldName in files) {
-      const fileArray = files[fieldName];
-      if (fileArray && fileArray.length > 0) {
-        const file = fileArray[0];
-        try {
-          const result = await cloudinary.uploader.upload(file.path, { 
-            resource_type: "image" 
-          });
-          fs.unlinkSync(file.path); // Delete temp file
-          imageUrls.push(result.secure_url);
-        } catch (uploadError) {
-          console.error('Cloudinary upload error:', uploadError);
-          // Don't fail the whole request if one image fails
-          continue;
-        }
+
+    for (const file of files) {
+      try {
+        const result = await cloudinary.uploader.upload(file.path, {
+          resource_type: 'image',
+        });
+        fs.unlinkSync(file.path); // delete local file
+        imageUrls.push(result.secure_url);
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        continue;
       }
     }
 
@@ -46,8 +39,9 @@ const AddProducts = async (req, res) => {
       return res.status(400).json({ success: false, message: "Failed to upload any images." });
     }
 
-    // Rest of your controller logic...
-    const parsedSizes = Array.isArray(sizes) ? sizes : (sizes ? [sizes] : ['M']);
+    const parsedSizes = Array.isArray(sizes)
+      ? sizes
+      : (typeof sizes === 'string' ? JSON.parse(sizes) : []);
 
     const newProduct = new Product({
       name,
@@ -66,12 +60,11 @@ const AddProducts = async (req, res) => {
       message: "Product added successfully",
       product: newProduct,
     });
-
   } catch (error) {
     console.error('Error adding product:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Error adding product' 
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Error adding product',
     });
   }
 };
