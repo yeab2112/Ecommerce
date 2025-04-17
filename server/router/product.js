@@ -19,8 +19,13 @@ const productRouter = express.Router();
 productRouter.post(
   '/add_products',
   authoAdmin,
-  upload.fields([{name:Image1,maxCount:1},{name:Image2,maxCount:1},{name:Image3,maxCount:1},{name:Image4,maxCount:1}]), // Accept up to 4 files with field name 'images'
-  AddProducts  
+  upload.fields([
+    { name: 'image1', maxCount: 1 },  // Use strings, not variables
+    { name: 'image2', maxCount: 1 },
+    { name: 'image3', maxCount: 1 },
+    { name: 'image4', maxCount: 1 }
+  ]),
+  AddProducts
 );
 // List all products
 productRouter.get('/list_products', ListProducts);  // Adjusted route to follow REST conventions
