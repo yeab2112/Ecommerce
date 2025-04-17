@@ -13,15 +13,24 @@ cloudinary.config({
 
 const AddProducts = async (req, res) => {
   try {
+    console.log('Received files:', req.files); // Debug log
+    
     const { name, price, description, category, bestSeller, sizes } = req.body;
-    const image1 = req.files.images1[0]; 
-    const image2 = req.files.images2[0]; 
-    const image3 = req.files.images3[0]; 
-    const image4 = req.files.images4[0]; 
+    
+    // Safer file access
+    const image1 = req.files?.images1?.[0];
+    const image2 = req.files?.images2?.[0];
+    const image3 = req.files?.images3?.[0];
+    const image4 = req.files?.images4?.[0];
 
-   const images=[image1,image2,image3,image4].filter((item)=>item!==undefined)
-  
-    // Process all uploaded images
+    const images = [image1, image2, image3, image4].filter(Boolean);
+
+    if (images.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'At least one image is required' 
+      });
+    }
     const imageUrls = await Promise.all(
       images.map(async(item)=>{
 let result=await cloudinary.uploader.upload(item.path,{resource_type:"image"})
