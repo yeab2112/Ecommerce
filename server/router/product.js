@@ -20,12 +20,11 @@ productRouter.post(
   '/add_products',
   authoAdmin,
   upload.fields([
-    { name: 'image1', maxCount: 1 },  // Use strings, not variables
-    { name: 'image2', maxCount: 1 },
-    { name: 'image3', maxCount: 1 },
-    { name: 'image4', maxCount: 1 }
-  ]),
-  AddProducts
+    { name: 'images1', maxCount: 1 },
+    { name: 'images2', maxCount: 1 },
+    { name: 'images3', maxCount: 1 },
+    { name: 'images4', maxCount: 1 }
+  ]),AddProducts
 );
 // List all products
 productRouter.get('/list_products', ListProducts);  // Adjusted route to follow REST conventions
