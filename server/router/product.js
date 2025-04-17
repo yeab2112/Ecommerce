@@ -19,7 +19,7 @@ const productRouter = express.Router();
 productRouter.post(
   '/add_products',
   authoAdmin,
-  upload.array('images', 4), // Accept up to 4 files with field name 'images'
+  upload.fields([{name:Image1,maxCount:1},{name:Image2,maxCount:1},{name:Image3,maxCount:1},{name:Image4,maxCount:1}]), // Accept up to 4 files with field name 'images'
   AddProducts  
 );
 // List all products

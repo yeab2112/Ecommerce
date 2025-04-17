@@ -1,4 +1,4 @@
-import fs from 'fs';
+
 import { Product } from "../moduls/product.js";
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
@@ -14,31 +14,21 @@ cloudinary.config({
 const AddProducts = async (req, res) => {
   try {
     const { name, price, description, category, bestSeller, sizes } = req.body;
-    const files = req.files; // This is now an array of files
+    const image1 = req.files.images1[0]; 
+    const image2 = req.files.images2[0]; 
+    const image3 = req.files.images3[0]; 
+    const image4 = req.files.images4[0]; 
 
-    if (!files || files.length === 0) {
-      return res.status(400).json({ success: false, message: "At least one image is required." });
-    }
-
+   const images=[image1,image2,image3,image4].filter((item)=>item!==undefined)
+  
     // Process all uploaded images
-    const imageUrls = [];
-    for (const file of files) {
-      try {
-        const result = await cloudinary.uploader.upload(file.path, { 
-          resource_type: "image" 
-        });
-        fs.unlinkSync(file.path); // Delete temp file
-        imageUrls.push(result.secure_url);
-      } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
-        // Skip failed uploads but continue with others
-      }
-    }
-
-    if (imageUrls.length === 0) {
-      return res.status(400).json({ success: false, message: "Failed to upload any images." });
-    }
-
+    const imageUrls = await Promise.all(
+      images.map(async(item)=>{
+let result=await cloudinary.uploader.upload(item.path,{resource_type:"image"})
+return  result.secure_url
+      })
+    )
+   
     // Parse sizes (frontend sends as JSON string)
     let parsedSizes;
     try {
@@ -54,10 +44,11 @@ const AddProducts = async (req, res) => {
       name,
       price: Number(price),
       images: imageUrls,
-      bestSeller: bestSeller === 'true',
+      bestSeller: bestSeller === 'true'? true:false,
       sizes: parsedSizes,
       description,
       category,
+      date:Date.now()
     });
 
     await newProduct.save();
