@@ -16,7 +16,9 @@ const AddProducts = async (req, res) => {
     console.log('Received files:', req.files); // Debug log
     
     const { name, price, description, category, bestSeller, sizes } = req.body;
-    
+    console.log('req.files:', req.files);
+console.log('req.body:', req.body);
+
     // Safer file access
     const image1 = req.files?.images1?.[0];
     const image2 = req.files?.images2?.[0];
