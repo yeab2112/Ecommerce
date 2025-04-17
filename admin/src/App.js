@@ -42,7 +42,7 @@ function App() {
             <main className="flex-1 p-6 bg-gray-100">
               <Routes>
                 {/* Add a route for protected pages */}
-                <Route path="/" element={<Navigate to="/add" />} />
+                <Route path="/" element={<Navigate to="/" />} />
                 <Route path="/add" element={isAuthenticated ? <Add /> : <Navigate to="/" />} />
                 <Route path="/list" element={isAuthenticated ? <List /> : <Navigate to="/" />} />
                 <Route path="/order" element={isAuthenticated ? <Orders /> : <Navigate to="/" />} />
