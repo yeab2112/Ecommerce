@@ -88,13 +88,16 @@ function Orders() {
     );
   });
 
-  // Pagination logic
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const paginate = (pageNumber) => {
+    if (pageNumber < 1) pageNumber = 1;
+    if (pageNumber > totalPages) pageNumber = totalPages;
+    setCurrentPage(pageNumber);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -136,53 +139,44 @@ function Orders() {
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
       <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Orders Management</h1>
 
-      {/* Search Section */}
-      <div className="mb-4 sm:mb-6 bg-white p-3 sm:p-4 rounded-lg shadow">
+      {/* Search */}
+      <div className="mb-6 bg-white p-4 rounded-lg shadow">
         <input
           type="text"
           placeholder="Search orders..."
-          className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
             setCurrentPage(1);
           }}
         />
-        <div className="mt-2 text-xs sm:text-sm text-gray-500">
-          {filteredOrders.length} orders found
-        </div>
+        <p className="mt-2 text-sm text-gray-500">
+          Showing {currentOrders.length} of {filteredOrders.length} filtered orders ({orders.length} total)
+        </p>
       </div>
 
-      {/* Orders List */}
-      <div className="space-y-4 mb-6 max-h-[calc(100vh-300px)] overflow-y-auto">
+      {/* Orders */}
+      <div className="space-y-6 mb-6">
         {currentOrders.length > 0 ? (
           currentOrders.map(order => (
-            <div key={order._id} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-              {/* Order Header - Mobile responsive */}
-              <div className="bg-gray-50 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b">
-                <div className="mb-2 sm:mb-0">
-                  <h2 className="font-semibold text-base sm:text-lg">Order #{order._id.slice(-6)}</h2>
-                  <p className="text-xs sm:text-sm text-gray-600">
-                    {new Date(order.createdAt).toLocaleString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+            <div key={order._id} className="border border-gray-200 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow bg-white">
+              <div className="bg-gray-100 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b">
+                <div>
+                  <h2 className="font-semibold text-lg">Order #{order._id.slice(-6)}</h2>
+                  <p className="text-sm text-gray-600">
+                    {new Date(order.createdAt).toLocaleString()}
                   </p>
                 </div>
-                <div className="flex items-center space-x-2 w-full sm:w-auto">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+                  <span className={`px-2 py-1 text-sm font-semibold rounded-full ${getStatusColor(order.status)}`}>
                     {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                   </span>
                   <select
                     value={order.status}
                     onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
                     disabled={isUpdating[order._id]}
-                    className={`border rounded-md p-1 sm:p-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                      isUpdating[order._id] ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
+                    className="border rounded-md px-2 py-1 text-sm"
                   >
                     <option value="pending">Pending</option>
                     <option value="processing">Processing</option>
@@ -193,47 +187,39 @@ function Orders() {
                 </div>
               </div>
 
-              {/* Order Content - Mobile responsive */}
-              <div className="p-3 sm:p-4">
-                {/* Customer Info */}
-                <div className="mb-3 sm:mb-4">
-                  <h3 className="font-medium text-base sm:text-lg mb-1 sm:mb-2 text-gray-800">Customer</h3>
-                  <div className="grid grid-cols-1 gap-2 sm:gap-4">
-                    <div className="bg-gray-50 p-2 sm:p-3 rounded text-xs sm:text-sm">
-                      <p className="font-medium">User Details</p>
-                      <p><span className="text-gray-600">Name:</span> {order.user?.name || 'N/A'}</p>
-                      <p><span className="text-gray-600">Email:</span> {order.user?.email || 'N/A'}</p>
-                    </div>
-                    <div className="bg-gray-50 p-2 sm:p-3 rounded text-xs sm:text-sm">
-                      <p className="font-medium">Delivery Details</p>
-                      <p><span className="text-gray-600">To:</span> {order.deliveryInfo?.firstName} {order.deliveryInfo?.lastName}</p>
-                      <p><span className="text-gray-600">Address:</span> {order.deliveryInfo?.address}, {order.deliveryInfo?.city}</p>
-                    </div>
+              <div className="p-4">
+                {/* User & Delivery Info Side-by-Side */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div className="bg-gray-50 p-3 rounded">
+                    <p className="font-medium">User Info</p>
+                    <p><span className="text-gray-600">Name:</span> {order.user?.name || 'N/A'}</p>
+                    <p><span className="text-gray-600">Email:</span> {order.user?.email || 'N/A'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded">
+                    <p className="font-medium">Delivery Info</p>
+                    <p><span className="text-gray-600">To:</span> {order.deliveryInfo?.firstName} {order.deliveryInfo?.lastName}</p>
+                    <p><span className="text-gray-600">Address:</span> {order.deliveryInfo?.address}, {order.deliveryInfo?.city}</p>
                   </div>
                 </div>
 
-                {/* Order Items - Mobile responsive */}
-                <div className="mb-3 sm:mb-4">
-                  <h3 className="font-medium text-base sm:text-lg mb-1 sm:mb-2 text-gray-800">Items</h3>
-                  <div className="space-y-2 sm:space-y-3">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="flex border-b pb-2 sm:pb-3 last:border-0">
+                {/* Order Items */}
+                <div className="mb-4">
+                  <p className="font-medium mb-2">Items</p>
+                  <div className="space-y-3">
+                    {order.items.map((item, i) => (
+                      <div key={i} className="flex items-start border-b pb-2 last:border-b-0">
                         <img 
-                          src={item.image || '/placeholder-product.jpg'} 
+                          src={item.image || '/placeholder.jpg'} 
                           alt={item.name}
-                          className="w-12 h-12 sm:w-16 sm:h-16 object-contain mr-2 sm:mr-4 rounded border border-gray-200"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = '/placeholder-product.jpg';
-                          }}
+                          className="w-14 h-14 object-contain mr-4 border rounded"
                         />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900 text-sm sm:text-base">{item.name}</p>
-                          <div className="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm mt-1">
-                            <div><span className="text-gray-600">Size:</span> {item.size}</div>
-                            <div><span className="text-gray-600">Qty:</span> {item.quantity}</div>
-                            <div><span className="text-gray-600">Price:</span> ${item.price.toFixed(2)}</div>
-                            <div><span className="text-gray-600">Total:</span> ${(item.price * item.quantity).toFixed(2)}</div>
+                        <div className="text-sm">
+                          <p className="font-medium">{item.name}</p>
+                          <div className="grid grid-cols-2 gap-x-6">
+                            <p><span className="text-gray-600">Qty:</span> {item.quantity}</p>
+                            <p><span className="text-gray-600">Size:</span> {item.size}</p>
+                            <p><span className="text-gray-600">Price:</span> ${item.price.toFixed(2)}</p>
+                            <p><span className="text-gray-600">Total:</span> ${(item.price * item.quantity).toFixed(2)}</p>
                           </div>
                         </div>
                       </div>
@@ -241,17 +227,17 @@ function Orders() {
                   </div>
                 </div>
 
-                {/* Order Summary - Mobile responsive */}
-                <div className="bg-gray-50 p-2 sm:p-4 rounded text-xs sm:text-sm">
-                  <h3 className="font-medium text-base sm:text-lg mb-1 sm:mb-2 text-gray-800">Summary</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
-                    <div>
+                {/* Order Summary */}
+                <div className="bg-gray-50 p-3 rounded">
+                  <p className="font-medium">Summary</p>
+                  <div className="flex justify-between">
+                    <div className="text-sm">
                       <p><span className="text-gray-600">Payment:</span> {order.paymentMethod}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right text-sm">
                       <p><span className="text-gray-600">Subtotal:</span> ${order.subtotal.toFixed(2)}</p>
                       <p><span className="text-gray-600">Delivery:</span> ${order.deliveryFee.toFixed(2)}</p>
-                      <p className="font-bold sm:text-lg mt-1 sm:mt-2">Total: ${order.total.toFixed(2)}</p>
+                      <p className="font-bold mt-1">Total: ${order.total.toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -259,48 +245,44 @@ function Orders() {
             </div>
           ))
         ) : (
-          <div className="text-center py-8 bg-white rounded-lg shadow">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h3 className="mt-2 text-lg font-medium text-gray-900">No orders found</h3>
-            <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter</p>
+          <div className="text-center py-10 bg-white rounded-lg shadow-lg">
+            <h3 className="text-lg font-medium text-gray-900">No orders found</h3>
+            <p className="text-sm text-gray-500">Try a different search.</p>
           </div>
         )}
       </div>
 
-      {/* Pagination Controls */}
-      {filteredOrders.length > ordersPerPage && (
-        <div className="flex justify-center mt-4">
-          <nav className="inline-flex rounded-md shadow">
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-6 text-sm">
+          <p>
+            Showing <strong>{indexOfFirstOrder + 1}</strong> to <strong>{Math.min(indexOfLastOrder, filteredOrders.length)}</strong> of <strong>{filteredOrders.length}</strong> results
+          </p>
+          <div className="flex gap-2">
             <button
-              onClick={() => paginate(Math.max(1, currentPage - 1))}
+              onClick={() => paginate(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-3 py-1 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
             >
-              Previous
+              Prev
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
+            {Array.from({ length: totalPages }, (_, i) => (
               <button
-                key={number}
-                onClick={() => paginate(number)}
-                className={`px-3 py-1 border-t border-b border-gray-300 text-sm font-medium ${
-                  currentPage === number
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                key={i + 1}
+                onClick={() => paginate(i + 1)}
+                className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
               >
-                {number}
+                {i + 1}
               </button>
             ))}
             <button
-              onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+              onClick={() => paginate(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
             >
               Next
             </button>
-          </nav>
+          </div>
         </div>
       )}
     </div>
