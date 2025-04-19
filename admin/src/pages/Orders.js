@@ -88,13 +88,18 @@ function Orders() {
     );
   });
 
-  // Pagination logic
+  // Get current orders for pagination
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  // Change page
+  const paginate = (pageNumber) => {
+    if (pageNumber < 1) pageNumber = 1;
+    if (pageNumber > totalPages) pageNumber = totalPages;
+    setCurrentPage(pageNumber);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -145,20 +150,20 @@ function Orders() {
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setCurrentPage(1);
+            setCurrentPage(1); // Reset to first page when searching
           }}
         />
         <div className="mt-2 text-xs sm:text-sm text-gray-500">
-          {filteredOrders.length} orders found
+          Showing {currentOrders.length} of {filteredOrders.length} filtered orders ({orders.length} total)
         </div>
       </div>
 
       {/* Orders List */}
-      <div className="space-y-4 mb-6 max-h-[calc(100vh-300px)] overflow-y-auto">
+      <div className="space-y-4 mb-6">
         {currentOrders.length > 0 ? (
           currentOrders.map(order => (
             <div key={order._id} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-              {/* Order Header - Mobile responsive */}
+              {/* Order Header */}
               <div className="bg-gray-50 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b">
                 <div className="mb-2 sm:mb-0">
                   <h2 className="font-semibold text-base sm:text-lg">Order #{order._id.slice(-6)}</h2>
@@ -193,7 +198,7 @@ function Orders() {
                 </div>
               </div>
 
-              {/* Order Content - Mobile responsive */}
+              {/* Order Content */}
               <div className="p-3 sm:p-4">
                 {/* Customer Info */}
                 <div className="mb-3 sm:mb-4">
@@ -212,7 +217,7 @@ function Orders() {
                   </div>
                 </div>
 
-                {/* Order Items - Mobile responsive */}
+                {/* Order Items */}
                 <div className="mb-3 sm:mb-4">
                   <h3 className="font-medium text-base sm:text-lg mb-1 sm:mb-2 text-gray-800">Items</h3>
                   <div className="space-y-2 sm:space-y-3">
@@ -241,7 +246,7 @@ function Orders() {
                   </div>
                 </div>
 
-                {/* Order Summary - Mobile responsive */}
+                {/* Order Summary */}
                 <div className="bg-gray-50 p-2 sm:p-4 rounded text-xs sm:text-sm">
                   <h3 className="font-medium text-base sm:text-lg mb-1 sm:mb-2 text-gray-800">Summary</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
@@ -269,38 +274,75 @@ function Orders() {
         )}
       </div>
 
-      {/* Pagination Controls */}
-      {filteredOrders.length > ordersPerPage && (
-        <div className="flex justify-center mt-4">
-          <nav className="inline-flex rounded-md shadow">
+      {/* Pagination Controls - Only show if there are multiple pages */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-4">
+          <div className="text-sm text-gray-700 mb-2 sm:mb-0">
+            Showing <span className="font-medium">{indexOfFirstOrder + 1}</span> to{' '}
+            <span className="font-medium">
+              {Math.min(indexOfLastOrder, filteredOrders.length)}
+            </span>{' '}
+            of <span className="font-medium">{filteredOrders.length}</span> results
+          </div>
+          <div className="flex space-x-1">
             <button
-              onClick={() => paginate(Math.max(1, currentPage - 1))}
+              onClick={() => paginate(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-3 py-1 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
+            
+            {/* Show page numbers */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              // Show pages around current page
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => paginate(pageNum)}
+                  className={`px-3 py-1 rounded-md border text-sm font-medium ${
+                    currentPage === pageNum
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            {totalPages > 5 && currentPage < totalPages - 2 && (
+              <span className="px-3 py-1 text-sm">...</span>
+            )}
+
+            {totalPages > 5 && currentPage < totalPages - 2 && (
               <button
-                key={number}
-                onClick={() => paginate(number)}
-                className={`px-3 py-1 border-t border-b border-gray-300 text-sm font-medium ${
-                  currentPage === number
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                onClick={() => paginate(totalPages)}
+                className="px-3 py-1 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                {number}
+                {totalPages}
               </button>
-            ))}
+            )}
+
             <button
-              onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+              onClick={() => paginate(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>
-          </nav>
+          </div>
         </div>
       )}
     </div>
