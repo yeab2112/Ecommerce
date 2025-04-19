@@ -152,7 +152,7 @@ function Orders() {
           }}
         />
         <p className="mt-2 text-sm text-gray-500">
-          Showing {currentOrders.length} of {filteredOrders.length} filtered orders ({orders.length} total)
+ ({orders.length} total Orders)
         </p>
       </div>
 
