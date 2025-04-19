@@ -151,6 +151,8 @@ const getProductById = async (req, res) => {
 const productDetail = async (req, res) => {
   try {
     const productId = req.params.productId;
+console.log(productId);  // "12345" 
+
     const product = await Product.findById(productId);
 
     if (product) {
