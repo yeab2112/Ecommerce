@@ -86,7 +86,6 @@ const UserLogin = async (req, res) => {
 
 // Admin Login 
 
-
 const AdminLogin = async (req, res) => {
   const { email, password } = req.body;
 

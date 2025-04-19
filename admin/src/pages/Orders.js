@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -89,10 +88,13 @@ function Orders() {
     );
   });
 
+  // Pagination logic
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -131,36 +133,36 @@ function Orders() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 overflow-x-auto">
-      <h1 className="text-2xl font-bold mb-6">Orders Management</h1>
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Orders Management</h1>
 
       {/* Search Section */}
-      <div className="mb-6 bg-white p-4 rounded-lg shadow">
+      <div className="mb-4 sm:mb-6 bg-white p-3 sm:p-4 rounded-lg shadow">
         <input
           type="text"
-          placeholder="Search orders by ID, name, or email..."
-          className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search orders..."
+          className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
             setCurrentPage(1);
           }}
         />
-        <div className="mt-2 text-sm text-gray-500">
+        <div className="mt-2 text-xs sm:text-sm text-gray-500">
           {filteredOrders.length} orders found
         </div>
       </div>
 
-      {/* Orders List (Scroll Container) */}
-      <div className="space-y-4 mb-8 max-h-96 overflow-y-auto">
+      {/* Orders List */}
+      <div className="space-y-4 mb-6 max-h-[calc(100vh-300px)] overflow-y-auto">
         {currentOrders.length > 0 ? (
           currentOrders.map(order => (
             <div key={order._id} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-              {/* Order Header */}
-              <div className="bg-gray-50 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b">
+              {/* Order Header - Mobile responsive */}
+              <div className="bg-gray-50 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b">
                 <div className="mb-2 sm:mb-0">
-                  <h2 className="font-semibold text-lg">Order #{order._id.slice(-6)}</h2>
-                  <p className="text-sm text-gray-600">
+                  <h2 className="font-semibold text-base sm:text-lg">Order #{order._id.slice(-6)}</h2>
+                  <p className="text-xs sm:text-sm text-gray-600">
                     {new Date(order.createdAt).toLocaleString('en-US', {
                       year: 'numeric',
                       month: 'short',
@@ -171,14 +173,16 @@ function Orders() {
                   </p>
                 </div>
                 <div className="flex items-center space-x-2 w-full sm:w-auto">
-                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
                     {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                   </span>
                   <select
                     value={order.status}
                     onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
                     disabled={isUpdating[order._id]}
-                    className={`border rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${isUpdating[order._id] ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    className={`border rounded-md p-1 sm:p-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                      isUpdating[order._id] ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                   >
                     <option value="pending">Pending</option>
                     <option value="processing">Processing</option>
@@ -189,18 +193,18 @@ function Orders() {
                 </div>
               </div>
 
-              {/* Order Content */}
-              <div className="p-4">
+              {/* Order Content - Mobile responsive */}
+              <div className="p-3 sm:p-4">
                 {/* Customer Info */}
-                <div className="mb-4">
-                  <h3 className="font-medium text-lg mb-2 text-gray-800">Customer Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-3 rounded">
+                <div className="mb-3 sm:mb-4">
+                  <h3 className="font-medium text-base sm:text-lg mb-1 sm:mb-2 text-gray-800">Customer</h3>
+                  <div className="grid grid-cols-1 gap-2 sm:gap-4">
+                    <div className="bg-gray-50 p-2 sm:p-3 rounded text-xs sm:text-sm">
                       <p className="font-medium">User Details</p>
                       <p><span className="text-gray-600">Name:</span> {order.user?.name || 'N/A'}</p>
                       <p><span className="text-gray-600">Email:</span> {order.user?.email || 'N/A'}</p>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded">
+                    <div className="bg-gray-50 p-2 sm:p-3 rounded text-xs sm:text-sm">
                       <p className="font-medium">Delivery Details</p>
                       <p><span className="text-gray-600">To:</span> {order.deliveryInfo?.firstName} {order.deliveryInfo?.lastName}</p>
                       <p><span className="text-gray-600">Address:</span> {order.deliveryInfo?.address}, {order.deliveryInfo?.city}</p>
@@ -208,24 +212,24 @@ function Orders() {
                   </div>
                 </div>
 
-                {/* Order Items */}
-                <div className="mb-4">
-                  <h3 className="font-medium text-lg mb-2 text-gray-800">Order Items</h3>
-                  <div className="space-y-3">
+                {/* Order Items - Mobile responsive */}
+                <div className="mb-3 sm:mb-4">
+                  <h3 className="font-medium text-base sm:text-lg mb-1 sm:mb-2 text-gray-800">Items</h3>
+                  <div className="space-y-2 sm:space-y-3">
                     {order.items.map((item, index) => (
-                      <div key={index} className="flex border-b pb-3 last:border-0">
+                      <div key={index} className="flex border-b pb-2 sm:pb-3 last:border-0">
                         <img 
                           src={item.image || '/placeholder-product.jpg'} 
                           alt={item.name}
-                          className="w-16 h-16 object-contain mr-4 rounded border border-gray-200"
+                          className="w-12 h-12 sm:w-16 sm:h-16 object-contain mr-2 sm:mr-4 rounded border border-gray-200"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = '/placeholder-product.jpg';
                           }}
                         />
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900">{item.name}</p>
-                          <div className="grid grid-cols-2 gap-2 text-sm mt-1">
+                          <p className="font-medium text-gray-900 text-sm sm:text-base">{item.name}</p>
+                          <div className="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm mt-1">
                             <div><span className="text-gray-600">Size:</span> {item.size}</div>
                             <div><span className="text-gray-600">Qty:</span> {item.quantity}</div>
                             <div><span className="text-gray-600">Price:</span> ${item.price.toFixed(2)}</div>
@@ -237,17 +241,17 @@ function Orders() {
                   </div>
                 </div>
 
-                {/* Order Summary */}
-                <div className="bg-gray-50 p-4 rounded">
-                  <h3 className="font-medium text-lg mb-2 text-gray-800">Order Summary</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Order Summary - Mobile responsive */}
+                <div className="bg-gray-50 p-2 sm:p-4 rounded text-xs sm:text-sm">
+                  <h3 className="font-medium text-base sm:text-lg mb-1 sm:mb-2 text-gray-800">Summary</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                     <div>
-                      <p><span className="text-gray-600">Payment Method:</span> {order.paymentMethod}</p>
+                      <p><span className="text-gray-600">Payment:</span> {order.paymentMethod}</p>
                     </div>
                     <div className="text-right">
                       <p><span className="text-gray-600">Subtotal:</span> ${order.subtotal.toFixed(2)}</p>
-                      <p><span className="text-gray-600">Delivery Fee:</span> ${order.deliveryFee.toFixed(2)}</p>
-                      <p className="font-bold text-lg mt-2">Total: ${order.total.toFixed(2)}</p>
+                      <p><span className="text-gray-600">Delivery:</span> ${order.deliveryFee.toFixed(2)}</p>
+                      <p className="font-bold sm:text-lg mt-1 sm:mt-2">Total: ${order.total.toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -260,11 +264,45 @@ function Orders() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <h3 className="mt-2 text-lg font-medium text-gray-900">No orders found</h3>
-            <p className="mt-1 text-gray-500">Try adjusting your search or filter to find what you're looking for.</p>
+            <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter</p>
           </div>
         )}
       </div>
 
+      {/* Pagination Controls */}
+      {filteredOrders.length > ordersPerPage && (
+        <div className="flex justify-center mt-4">
+          <nav className="inline-flex rounded-md shadow">
+            <button
+              onClick={() => paginate(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
+              <button
+                key={number}
+                onClick={() => paginate(number)}
+                className={`px-3 py-1 border-t border-b border-gray-300 text-sm font-medium ${
+                  currentPage === number
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {number}
+              </button>
+            ))}
+            <button
+              onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </nav>
+        </div>
+      )}
     </div>
   );
 }
