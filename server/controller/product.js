@@ -149,15 +149,19 @@ const getProductById = async (req, res) => {
 
 // Get product details (used for details page)
 const productDetail = async (req, res) => {
-  const productId = req.params.productId;
-  const product = await Product.findById(productId);
+  try {
+    const productId = req.params.productId;
+    const product = await Product.findById(productId);
 
-  if (product) {
-    res.json(product);
-  } else {
-    res.status(404).json({ message: 'Product not found' });
-  }
-};
+    if (product) {
+      res.status(200).json(product);
+    } else {
+      res.status(404).json({ message: 'Product not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching product' });
+  }}
+;
 const updateProducts = async (req, res) => {
   try {
     const { productId } = req.params;
