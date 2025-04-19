@@ -13,14 +13,14 @@ function Orders() {
   const [ordersPerPage] = useState(5);
   const [isUpdating, setIsUpdating] = useState({});
 
-  const token = localStorage.getItem('atoken');
+  const atoken = localStorage.getItem('atoken');
 
   useEffect(() => {
     const fetchAllOrders = async () => {
       try {
         const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/orders/allOrder', {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${atoken}`
           }
         });
 
@@ -39,7 +39,7 @@ function Orders() {
     };
 
     fetchAllOrders();
-  }, [token]);
+  }, [atoken]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     if (!orderId || !newStatus) return;
@@ -52,7 +52,7 @@ function Orders() {
         { status: newStatus },
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${atoken}`,
             'Content-Type': 'application/json'
           }
         }

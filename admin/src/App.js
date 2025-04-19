@@ -12,21 +12,21 @@ function App() {
 
   // Check for token on initial load
   useEffect(() => {
-    const token = localStorage.getItem('token'); // Retrieve token from localStorage
-    if (token) {
+    const atoken = localStorage.getItem('atoken'); // Retrieve token from localStorage
+    if (atoken) {
       setIsAuthenticated(true); // Set authenticated to true if token exists
     }
   }, []);
 
   // Handle login (set token and update state)
-  const handleLogin = (token) => {
-    localStorage.setItem('token', token); // Store token in localStorage
+  const handleLogin = (atoken) => {
+    localStorage.setItem('atoken', atoken); // Store token in localStorage
     setIsAuthenticated(true); // Update authentication state
   };
 
   const handleLogout = () => {
     console.log("Logout triggered");
-    localStorage.removeItem('token');
+    localStorage.removeItem('atoken');
     setIsAuthenticated(false);
   };
 

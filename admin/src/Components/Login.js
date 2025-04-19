@@ -27,7 +27,7 @@ function Login({ onLogin }) {
       localStorage.setItem("atoken", data.atoken);
   
       // Call the onLogin function to update authentication state
-      onLogin(data.token);
+      onLogin(data.atoken);
     } catch (error) {
       console.error("Login error:", error.message);
       alert(error.message);
@@ -40,10 +40,7 @@ function Login({ onLogin }) {
     console.log('Forgot password clicked');
   };
 
-  const handleSignUp = () => {
-    // Add logic for sign up
-    console.log('Sign up clicked');
-  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
@@ -100,16 +97,6 @@ function Login({ onLogin }) {
           Forgot password?
         </button>
 
-        {/* Sign Up Button */}
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Don't have an account?{' '}
-          <button
-            onClick={handleSignUp}
-            className="text-blue-500 hover:text-blue-700 focus:outline-none"
-          >
-            Sign up
-          </button>
-        </p>
       </div>
     </div>
   );
