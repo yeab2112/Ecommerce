@@ -7,8 +7,7 @@ import {
   ListProducts,
   deleteProduct,
   updateProduct,
-  getProductById,
-  productDetail,
+ productDetail,
   updateProducts
 } from '../controller/product.js';
 
@@ -35,9 +34,6 @@ productRouter.delete('/delete_product/:productId', authoAdmin,deleteProduct);
 
 // Update a product by ID (Admin only)
 productRouter.put('/products/:id', authoAdmin, updateProduct);
-
-// Get a product by ID (Public access allowed)
-productRouter.get('/products/:id', getProductById);
 
 // Get detailed product information by ID (change this to avoid conflicts)
 productRouter.get('/detail_products/:productId', productDetail);  

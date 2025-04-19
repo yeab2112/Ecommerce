@@ -131,22 +131,6 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// Get product by ID
-const getProductById = async (req, res) => {
-  try {
-    const productId = req.params.id;
-    const product = await Product.findById(productId);
-
-    if (product) {
-      res.status(200).json(product);
-    } else {
-      res.status(404).json({ message: 'Product not found' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching product' });
-  }
-};
-
 // Get product details (used for details page)
 const productDetail = async (req, res) => {
   try {
@@ -182,4 +166,4 @@ const updateProducts = async (req, res) => {
 };
 
 // Export all controller functions
-export { AddProducts, productDetail, ListProducts, deleteProduct, updateProduct, getProductById ,updateProducts};
+export { AddProducts, productDetail, ListProducts, deleteProduct, updateProduct ,updateProducts};
