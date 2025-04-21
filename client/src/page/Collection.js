@@ -6,16 +6,18 @@ import Title from '../component/Title';
 function Collection() {
   const { products, search, getProducts } = useContext(ShopContext);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [sortOption, setSortOption] = useState('relavent');
+  const [sortOption, setSortOption] = useState('relevant');
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     getProducts();
-  }, [products, getProducts]);
+  }, [getProducts]); // Removed products from dependencies to prevent infinite loops
 
   const handleCategoryChange = (category) => {
     setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category]
+      prev.includes(category) 
+        ? prev.filter((item) => item !== category) 
+        : [...prev, category]
     );
   };
 
@@ -35,24 +37,58 @@ function Collection() {
     });
 
   return (
-    <div className="flex flex-col md:flex-row px-4 md:px-8 py-6 gap-6">
-      {/* Filters Section */}
-      <div className="md:w-1/6 p-4 m-7 md:mb-0 border-r-2 border-gray-300">
+    <div className="px-4 py-6 md:px-8">
+      {/* Mobile Header with Filter/Sort */}
+      <div className="md:hidden flex items-center justify-between mb-4">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="md:hidden bg-blue-500 text-white p-2 rounded-full w-full text-center"
+          className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg"
         >
-          {showFilters ? 'Hide Filters' : 'Show Filters'}
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+          </svg>
+          Filters
         </button>
-        <div className={`mt-4 ${showFilters ? 'block' : 'hidden'} md:block`}>
-          <p className="font-bold text-lg mb-2 text-gray-800">Filter</p>
+        
+        <div className="flex-grow text-center">
+          <Title title1="All" title2="Collection" />
+        </div>
+        
+        <select
+          className="border p-2 rounded shadow-sm text-gray-700 text-sm"
+          value={sortOption}
+          onChange={handleSortChange}
+        >
+          <option value="relevant">Relevant</option>
+          <option value="high-low">High to Low</option>
+          <option value="low-high">Low to High</option>
+        </select>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Filters Section - Mobile Slide-in */}
+        <div className={`fixed md:static inset-0 z-40 md:z-auto bg-white md:bg-transparent transform ${
+          showFilters ? 'translate-x-0' : '-translate-x-full'
+        } md:transform-none transition-transform duration-300 ease-in-out md:w-1/6 p-4 md:border-r-2 md:border-gray-300 overflow-y-auto`}>
+          <div className="flex justify-between items-center mb-4 md:hidden">
+            <h2 className="text-xl font-bold">Filters</h2>
+            <button 
+              onClick={() => setShowFilters(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
           <div className="mb-6">
             <p className="font-semibold text-gray-700 mb-2">Categories</p>
             {['Men', 'Women', 'Kids'].map((category) => (
-              <label key={category} className="block text-gray-600 mb-2">
+              <label key={category} className="flex items-center text-gray-600 mb-2">
                 <input
                   type="checkbox"
-                  className="mr-2 accent-blue-500"
+                  className="mr-2 h-4 w-4 accent-blue-500"
                   checked={selectedCategories.includes(category)}
                   onChange={() => handleCategoryChange(category)}
                 />
@@ -61,57 +97,73 @@ function Collection() {
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Products and Sorting Section */}
-      <div className="w-full md:w-3/4 p-4">
-        <div className="flex flex-wrap items-center justify-between mb-4">
-          <div className="md:hidden flex">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="bg-blue-500 text-white p-2 rounded-full mr-2"
-            >
-              {showFilters ? 'Hide Filters' : 'Show Filters'}
-            </button>
-          </div>
-          <div className="flex-grow flex justify-center">
+        {/* Overlay for mobile filters */}
+        {showFilters && (
+          <div 
+            className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"
+            onClick={() => setShowFilters(false)}
+          />
+        )}
+
+        {/* Products Section */}
+        <div className="w-full md:w-5/6">
+          {/* Desktop Header */}
+          <div className="hidden md:flex items-center justify-between mb-6">
             <Title title1="All" title2="Collection" />
-          </div>
-          <div className="ml-4">
-            <select
-              className="border p-2 rounded shadow-sm text-gray-700 focus:ring focus:ring-blue-300"
-              value={sortOption}
-              onChange={handleSortChange}
-            >
-              <option value="relavent">Relevant</option>
-              <option value="high-low">High to Low</option>
-              <option value="low-high">Low to High</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredProducts.length > 0 ? (
-            filteredProducts.map((product) => (
-              <Link
-                key={product._id}
-                to={`/product/${product._id}`}
-                className="bg-blue-100 border p-4 rounded shadow-sm hover:shadow-lg transition-shadow duration-200 max-w-full"
+            <div className="flex items-center gap-4">
+              <span className="text-gray-600">Sort by:</span>
+              <select
+                className="border p-2 rounded shadow-sm text-gray-700"
+                value={sortOption}
+                onChange={handleSortChange}
               >
-                <img
-                  src={product.images && product.images.length > 0 ? product.images[0] : 'fallback-image.jpg'}
-                  alt={product.name}
-                  className="w-full h-full sm:h-60 md:h-72 lg:h-80 object-cover rounded-t-lg"
-                />
-                <h3 className="font-bold mt-2 text-gray-800">{product.name}</h3>
-                <p className="text-gray-500">{product.category}</p>
-                <p className="font-bold text-blue-600">${product.price}</p>
-              </Link>
-            ))
-          ) : (
-            <p className="text-gray-500">No products found</p>
-          )}
+                <option value="relevant">Relevant</option>
+                <option value="high-low">High to Low</option>
+                <option value="low-high">Low to High</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Products Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => (
+                <Link
+                  key={product._id}
+                  to={`/product/${product._id}`}
+                  className="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
+                >
+                  <div className="aspect-square overflow-hidden">
+                    <img
+                      src={product.images?.[0] || '/placeholder-product.jpg'}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="p-3">
+                    <h3 className="font-semibold text-gray-800 line-clamp-1">{product.name}</h3>
+                    <p className="text-sm text-gray-500 capitalize">{product.category}</p>
+                    <p className="font-bold text-blue-600 mt-1">${product.price.toFixed(2)}</p>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-10">
+                <p className="text-gray-500">No products found matching your criteria</p>
+                <button 
+                  onClick={() => {
+                    setSelectedCategories([]);
+                    setSortOption('relevant');
+                  }}
+                  className="mt-4 text-blue-500 hover:text-blue-700"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
