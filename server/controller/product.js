@@ -135,19 +135,30 @@ const updateProduct = async (req, res) => {
 const productDetail = async (req, res) => {
   try {
     const productId = req.params.productId;
-console.log(productId);  // "12345" 
+    console.log(productId);  // e.g. "12345" 
 
     const product = await Product.findById(productId);
 
     if (product) {
-      res.status(200).json(product);
+      // Convert sizes from string to array if needed
+      const sizes = Array.isArray(product.sizes)
+        ? product.sizes
+        : typeof product.sizes === 'string'
+        ? product.sizes.split(',') // "M,S" → ["M", "S"]
+        : [];
+
+      res.status(200).json({
+        ...product.toObject(),
+        sizes, // send parsed sizes
+      });
     } else {
       res.status(404).json({ message: 'Product not found' });
     }
   } catch (error) {
     res.status(500).json({ message: 'Error fetching product' });
-  }}
-;
+  }
+};
+
 const updateProducts = async (req, res) => {
   try {
     const { productId } = req.params;
