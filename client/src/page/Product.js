@@ -20,8 +20,7 @@ const Product = () => {
         setLoading(true); 
         const response = await axios.get(`https://ecommerce-rho-hazel.vercel.app/api/product/detail_products/${productId}`);
         if (response.data) {
-          const sizes = response.data.sizes ? JSON.parse(response.data.sizes) : [];
-          setProduct({
+          const sizes = response.data.sizes || [];          setProduct({
             ...response.data,
             sizes,
           });
