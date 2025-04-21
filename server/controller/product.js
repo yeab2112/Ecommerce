@@ -132,33 +132,49 @@ const updateProduct = async (req, res) => {
 };
 
 // Get product details (used for details page)
+
 const productDetail = async (req, res) => {
   try {
     const productId = req.params.productId;
-    console.log(productId);  // e.g. "12345" 
-
     const product = await Product.findById(productId);
 
-    if (product) {
-      // Convert sizes from string to array if needed
-      // In your route handler:
-const sizes = Array.isArray(product.sizes)
-? product.sizes
-: typeof product.sizes === 'string'
-  ? product.sizes.split(',').map(s => s.trim())
-  : [];
-
-      res.status(200).json({
-        ...product.toObject(),
-        sizes, // send parsed sizes
-      });
-    } else {
-      res.status(404).json({ message: 'Product not found' });
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
     }
+
+    // Normalize sizes to always be an array of strings
+    const normalizeSizes = (sizes) => {
+      if (!sizes) return [];
+      
+      // Case 1: Array containing a JSON string (["[\"S\",\"M\",\"L\"]"])
+      if (Array.isArray(sizes) && sizes.length === 1 && 
+          typeof sizes[0] === 'string' && sizes[0].startsWith('[')) {
+        try {
+          return JSON.parse(sizes[0]);
+        } catch {
+          return sizes[0].replace(/[\[\]"]/g, '').split(',').map(s => s.trim());
+        }
+      }
+      
+      // Case 2: Already proper array (["S","M","L"]) or string ("S,M,L")
+      if (Array.isArray(sizes)) return sizes;
+      if (typeof sizes === 'string') return sizes.split(',').map(s => s.trim());
+      
+      return [];
+    };
+
+    const sizes = normalizeSizes(product.sizes);
+
+    res.status(200).json({
+      ...product.toObject(),
+      sizes, // Now always a clean array
+    });
   } catch (error) {
+    console.error('Error fetching product:', error);
     res.status(500).json({ message: 'Error fetching product' });
   }
 };
+
 
 const updateProducts = async (req, res) => {
   try {

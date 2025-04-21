@@ -19,16 +19,13 @@ const Product = () => {
       try {
         setLoading(true); 
         const response = await axios.get(`https://ecommerce-rho-hazel.vercel.app/api/product/detail_products/${productId}`);
+        
         if (response.data) {
-          const sizes = Array.isArray(response.data.sizes) 
-          ? response.data.sizes 
-          : typeof response.data.sizes === 'string' 
-            ? response.data.sizes.split(',').map(s => s.trim()) : [];           
-             setProduct({
+          setProduct({
             ...response.data,
-            sizes,
+            sizes: response.data.sizes || [], // Fallback to empty array
           });
-          setCurrentImage(response.data.images[0] || null);
+          setCurrentImage(response.data.images?.[0] || assets.placeholder);
         }
       } catch (error) {
         console.error('Error fetching product details:', error);
@@ -55,8 +52,8 @@ const Product = () => {
 
   return (
     <div className="product-detail-container p-6 flex flex-col gap-8 w-full mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-3 w-full justify-center gap-8 ">
-        {/* First Column: Thumbnails */}
+      <div className="grid grid-cols-1 md:grid-cols-3 w-full justify-center gap-8">
+        {/* Thumbnails Column */}
         <div className="thumbnails flex flex-col gap-3 w-1/3">
           {product.images?.map((img, index) => (
             <img
@@ -71,31 +68,27 @@ const Product = () => {
           ))}
         </div>
 
-        {/* Second Column: Main Image */}
+        {/* Main Image Column */}
         <div className="main-image flex justify-center w-2/3">
           <img
-            src={currentImage || product.image || assets.placeholder}
+            src={currentImage}
             alt={product.name}
             className="max-w-md w-full h-auto max-h-[500px] object-contain rounded-lg shadow-md"
           />
         </div>
 
-        {/* Third Column: Product Details */}
+        {/* Product Details Column */}
         <div className="details-section flex flex-col gap-4 w-2/3">
           <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
-
-          {/* Stars/Rating */}
+          
           <div className="rating flex items-center mb-4">
             <span className="text-yellow-500">⭐⭐⭐⭐☆</span>
           </div>
-
-          {/* Price */}
+          
           <p className="text-xl font-semibold text-gray-800">{`$${product.price}`}</p>
-
-          {/* Description */}
+          
           <p className="text-gray-600 mb-4">{product.description}</p>
-
-          {/* Size Selection */}
+          
           <div className="size-selection mb-4">
             <label htmlFor="size" className="text-lg font-semibold block mb-2">
               Select Size:
@@ -115,8 +108,7 @@ const Product = () => {
             </select>
             {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
           </div>
-
-          {/* Add to Cart Button */}
+          
           <button
             onClick={handleAddToCart}
             className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 w-36"
@@ -126,8 +118,11 @@ const Product = () => {
         </div>
       </div>
 
-      {/* Related Products */}
-      <RelatedProduct category={product.category} currentProductId={product._id} products={products} />
+      <RelatedProduct 
+        category={product.category} 
+        currentProductId={product._id} 
+        products={products} 
+      />
     </div>
   );
 };
