@@ -141,11 +141,12 @@ const productDetail = async (req, res) => {
 
     if (product) {
       // Convert sizes from string to array if needed
-      const sizes = Array.isArray(product.sizes)
-        ? product.sizes
-        : typeof product.sizes === 'string'
-        ? product.sizes.split(',') // "M,S" → ["M", "S"]
-        : [];
+      // In your route handler:
+const sizes = Array.isArray(product.sizes)
+? product.sizes
+: typeof product.sizes === 'string'
+  ? product.sizes.split(',').map(s => s.trim())
+  : [];
 
       res.status(200).json({
         ...product.toObject(),
