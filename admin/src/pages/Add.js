@@ -1,25 +1,23 @@
 import React, { useState } from 'react';
-import { asset } from '../asset/asset'; // Import assets (e.g., default image)
-import { ToastContainer, toast } from 'react-toastify'; // Import Toastify
-import 'react-toastify/dist/ReactToastify.css'; // Import Toastify styles
+import { asset } from '../asset/asset';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function Add() {
-  // State to manage form inputs
   const [product, setProduct] = useState({
     name: '',
     description: '',
     category: '',
     price: '',
-    sizes: [], // Array of sizes
+    sizes: [],
     bestSeller: false,
-    images: [], // List of uploaded images
+    images: [],
   });
 
-  const [uploadProgress, setUploadProgress] = useState(0); // Track upload progress
-  const [error, setError] = useState(''); // Track error messages
-  const [isSubmitting, setIsSubmitting] = useState(false); // Track form submission state
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setProduct({
@@ -28,15 +26,14 @@ function Add() {
     });
   };
 
-  // Handle size selection
   const handleSizeChange = (e) => {
     const { value, checked } = e.target;
     let updatedSizes = [...product.sizes];
 
     if (checked) {
-      updatedSizes.push(value); // Add size to the array
+      updatedSizes.push(value);
     } else {
-      updatedSizes = updatedSizes.filter((size) => size !== value); // Remove size from the array
+      updatedSizes = updatedSizes.filter((size) => size !== value);
     }
 
     setProduct({
@@ -45,36 +42,30 @@ function Add() {
     });
   };
 
-  // Handle image upload
   const handleImageUpload = async (e, index) => {
     const files = e.target.files;
     if (files && files[0]) {
       const file = files[0];
 
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         setError('Please upload an image file.');
         return;
       }
 
-      // Validate file size (e.g., 5MB)
       if (file.size > 5 * 1024 * 1024) {
         setError('File size must be less than 5MB.');
         return;
       }
 
       const updatedImages = [...product.images];
-
-      // Simulate upload progress
       const interval = setInterval(() => {
         setUploadProgress((prev) => (prev < 90 ? prev + 10 : prev));
       }, 100);
 
-      // Simulate API call for image upload
       setTimeout(() => {
         clearInterval(interval);
         setUploadProgress(100);
-        updatedImages[index] = file; // Store the file object for later submission
+        updatedImages[index] = file;
         setProduct({
           ...product,
           images: updatedImages,
@@ -85,17 +76,15 @@ function Add() {
     }
   };
 
-  // Handle remove image
   const handleRemoveImage = (index) => {
     const updatedImages = [...product.images];
-    updatedImages[index] = null; // Remove the image
+    updatedImages[index] = null;
     setProduct({
       ...product,
       images: updatedImages,
     });
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -105,28 +94,24 @@ function Add() {
       const atoken = localStorage.getItem('atoken');
       if (!atoken) throw new Error('Authentication required');
 
+      const formData = new FormData();
+      formData.append('name', product.name);
+      formData.append('description', product.description);
+      formData.append('category', product.category);
+      formData.append('price', product.price);
+      formData.append('bestSeller', product.bestSeller);
+      formData.append('sizes', JSON.stringify(product.sizes));
 
-// Append images with the same field name 'images'
-const formData = new FormData();
-formData.append('name', product.name);
-formData.append('description', product.description);
-formData.append('category', product.category);
-formData.append('price', product.price);
-formData.append('bestSeller', product.bestSeller);
-formData.append('sizes', JSON.stringify(product.sizes));
-
-if (product.images[0]) formData.append('images1', product.images[0]);
-if (product.images[1]) formData.append('images2', product.images[1]);
-if (product.images[2]) formData.append('images3', product.images[2]);
-if (product.images[3]) formData.append('images4', product.images[3]);
-
+      if (product.images[0]) formData.append('images1', product.images[0]);
+      if (product.images[1]) formData.append('images2', product.images[1]);
+      if (product.images[2]) formData.append('images3', product.images[2]);
+      if (product.images[3]) formData.append('images4', product.images[3]);
 
       const response = await fetch('https://ecommerce-rho-hazel.vercel.app/api/product/add_products', {
         method: 'POST',
         body: formData,
         headers: {
           'Authorization': `Bearer ${atoken}`,
-          // Do not set 'Content-Type' explicitly when using FormData
         },
       });
 
@@ -135,7 +120,6 @@ if (product.images[3]) formData.append('images4', product.images[3]);
         throw new Error(errorData.error || 'Failed to add product');
       }
 
-      // Reset form on success
       setProduct({
         name: '',
         description: '',
@@ -143,14 +127,12 @@ if (product.images[3]) formData.append('images4', product.images[3]);
         price: '',
         sizes: [],
         bestSeller: false,
-        images: [], // Reset images after submission
+        images: [],
       });
 
-      // Show success notification
       toast.success('Product added successfully!');
     } catch (err) {
       setError(err.message);
-      // Show error notification
       toast.error(err.message || 'An error occurred while adding the product');
     } finally {
       setIsSubmitting(false);
@@ -158,19 +140,17 @@ if (product.images[3]) formData.append('images4', product.images[3]);
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-8 bg-white shadow-lg rounded-lg">
-      <h2 className="text-2xl font-bold mb-6 text-center">Add New Product</h2>
+    <div className="max-w-3xl mx-auto p-4 md:p-8 bg-white shadow-lg rounded-lg">
+      <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center">Add New Product</h2>
 
-      {/* Error Message */}
       {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
 
-      {/* Image Upload Fields */}
+      {/* Image Upload Fields - Responsive Grid */}
       <div className="mb-6 text-center">
-        <label className="block text-sm font-medium text-gray-700 mb-4">Upload Images (Max 4)</label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2 md:mb-4">Upload Images (Max 4)</label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-4 md:gap-4">
           {[0, 1, 2, 3].map((index) => (
-            <div key={index} className="flex flex-col items-center justify-center space-y-2 relative">
-              {/* Hidden file input */}
+            <div key={index} className="flex flex-col items-center justify-center space-y-1 md:space-y-2 relative">
               <input
                 type="file"
                 id={`file-input-${index}`}
@@ -178,10 +158,9 @@ if (product.images[3]) formData.append('images4', product.images[3]);
                 onChange={(e) => handleImageUpload(e, index)}
                 className="hidden"
               />
-              {/* Label (image preview) */}
               <label
                 htmlFor={`file-input-${index}`}
-                className="cursor-pointer w-24 h-24 bg-gray-300 rounded-lg flex items-center justify-center overflow-hidden"
+                className="cursor-pointer w-full aspect-square bg-gray-300 rounded-lg flex items-center justify-center overflow-hidden"
               >
                 {product.images[index] ? (
                   <img
@@ -194,17 +173,16 @@ if (product.images[3]) formData.append('images4', product.images[3]);
                     <img
                       src={asset.upload || 'default-image-path.jpg'}
                       alt="Upload"
-                      className="w-full h-full object-cover"
+                      className="w-3/4 h-3/4 object-contain opacity-50"
                     />
                   </div>
                 )}
               </label>
-              {/* Remove button */}
               {product.images[index] && (
                 <button
                   type="button"
                   onClick={() => handleRemoveImage(index)}
-                  className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 md:p-1 hover:bg-red-600 text-xs md:text-base"
                 >
                   &times;
                 </button>
@@ -212,9 +190,8 @@ if (product.images[3]) formData.append('images4', product.images[3]);
             </div>
           ))}
         </div>
-        {/* Upload Progress */}
         {uploadProgress > 0 && (
-          <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2 md:mt-4">
             <div
               className="bg-indigo-600 h-2 rounded-full"
               style={{ width: `${uploadProgress}%` }}
@@ -224,9 +201,9 @@ if (product.images[3]) formData.append('images4', product.images[3]);
       </div>
 
       {/* Product Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
         {/* Product Name */}
-        <div className="form-group">
+        <div>
           <label className="block text-sm font-medium text-gray-700">Product Name</label>
           <input
             type="text"
@@ -234,31 +211,32 @@ if (product.images[3]) formData.append('images4', product.images[3]);
             value={product.name}
             onChange={handleInputChange}
             required
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         {/* Product Description */}
-        <div className="form-group">
+        <div>
           <label className="block text-sm font-medium text-gray-700">Product Description</label>
           <textarea
             name="description"
             value={product.description}
             onChange={handleInputChange}
             required
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            rows="3"
+            className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         {/* Product Category */}
-        <div className="form-group">
+        <div>
           <label className="block text-sm font-medium text-gray-700">Product Category</label>
           <select
             name="category"
             value={product.category}
             onChange={handleInputChange}
             required
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">Select Category</option>
             <option value="Women">Women</option>
@@ -268,7 +246,7 @@ if (product.images[3]) formData.append('images4', product.images[3]);
         </div>
 
         {/* Product Price */}
-        <div className="form-group">
+        <div>
           <label className="block text-sm font-medium text-gray-700">Product Price</label>
           <input
             type="number"
@@ -276,54 +254,53 @@ if (product.images[3]) formData.append('images4', product.images[3]);
             value={product.price}
             onChange={handleInputChange}
             required
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full p-2 md:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
-        {/* Product Sizes */}
-        <div className="form-group">
-          <label className="block text-sm font-medium text-gray-700">Product Sizes</label>
-          <div className="flex space-x-4">
+        {/* Product Sizes - Responsive Layout */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Product Sizes</label>
+          <div className="flex flex-wrap gap-3">
             {['S', 'M', 'L'].map((size) => (
-              <label key={size} className="flex items-center">
+              <label key={size} className="flex items-center space-x-1">
                 <input
                   type="checkbox"
                   name="sizes"
                   value={size}
                   checked={product.sizes.includes(size)}
                   onChange={handleSizeChange}
-                  className="mr-2"
+                  className="h-4 w-4"
                 />
-                {size}
+                <span>{size}</span>
               </label>
             ))}
           </div>
         </div>
 
         {/* Best Seller Checkbox */}
-        <div className="form-group flex items-center">
+        <div className="flex items-center">
           <input
             type="checkbox"
             name="bestSeller"
             checked={product.bestSeller}
             onChange={handleInputChange}
-            className="mr-2"
+            className="h-4 w-4"
           />
-          <label className="text-sm font-medium text-gray-700">Best Seller</label>
+          <label className="ml-2 text-sm font-medium text-gray-700">Best Seller</label>
         </div>
 
         {/* Add Button */}
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full py-2 md:py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           {isSubmitting ? 'Adding Product...' : 'Add Product'}
         </button>
       </form>
 
-      {/* Toastify container */}
-      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop />
+      <ToastContainer position="top-center" autoClose={5000} hideProgressBar={false} newestOnTop />
     </div>
   );
 }
