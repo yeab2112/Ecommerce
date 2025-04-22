@@ -62,8 +62,14 @@ function OrderConfirmation() {
         setTrackingData(prev => ({
           ...prev,
           [orderId]: {
-            status: response.data.status, // Assuming your API now returns status too
-            trackingInfo: response.data.trackingInfo
+            status: response.data.status,
+            ...(response.data.trackingInfo && {
+              trackingInfo: {
+                carrier: response.data.trackingInfo.carrier,
+                trackingNumber: response.data.trackingInfo.trackingNumber,
+                updatedAt: response.data.trackingInfo.updatedAt
+              }
+            })
           }
         }));
       } else {
@@ -120,18 +126,13 @@ function OrderConfirmation() {
 
           return (
             <div key={order._id} className="border rounded-lg overflow-hidden shadow-sm">
-              {/* Order Header */}
-              <div className="bg-gray-50 p-4 border-b flex flex-col md:flex-row justify-between items-start md:items-center">
+              {/* Order Header - Removed status badge from here */}
+              <div className="bg-gray-50 p-4 border-b flex justify-between items-center">
                 <div>
                   <h2 className="font-semibold">
                     Order #{order.orderNumber || order._id.slice(-8).toUpperCase()}
                   </h2>
                   <p className="text-sm text-gray-600">Placed on {orderDate}</p>
-                </div>
-                <div className="mt-2 md:mt-0">
-                  <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(order.status)}`}>
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                  </span>
                 </div>
               </div>
 
@@ -139,7 +140,6 @@ function OrderConfirmation() {
               <div className="divide-y">
                 {order.items.map((item, index) => (
                   <div key={index} className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Product Image */}
                     <div className="flex items-center">
                       <img
                         className="w-20 h-20 object-contain"
@@ -156,12 +156,10 @@ function OrderConfirmation() {
                       </div>
                     </div>
 
-                    {/* Quantity */}
                     <div className="flex items-center md:justify-center">
                       <p className="text-gray-600">Quantity: {item.quantity}</p>
                     </div>
 
-                    {/* Price - No text on small devices */}
                     <div className="flex items-center justify-end">
                       <p className="font-medium">{currency}{item.price.toFixed(2)}</p>
                     </div>
@@ -181,18 +179,18 @@ function OrderConfirmation() {
                   </button>
                 </div>
                 
-                <div className="text-right w-full md:w-auto">
-                  <p className="text-lg font-medium">Total: {currency}{order.total.toFixed(2)}</p>
+                <div className="w-full md:w-auto">
+                  <p className="text-lg font-medium text-right">Total: {currency}{order.total.toFixed(2)}</p>
                   {trackingData[order._id] && (
                     <div className="mt-2 p-3 bg-white rounded-md border">
                       <div className="flex flex-col space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Current Status:</span>
+                          <span className="text-gray-600">Order Status:</span>
                           <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(trackingData[order._id].status)}`}>
-                            {trackingData[order._id].status}
+                            {trackingData[order._id].status.charAt(0).toUpperCase() + trackingData[order._id].status.slice(1)}
                           </span>
                         </div>
-                        {trackingData[order._id].trackingInfo && (
+                        {trackingData[order._id].trackingInfo ? (
                           <>
                             <div className="flex items-center justify-between">
                               <span className="text-gray-600">Carrier:</span>
@@ -209,6 +207,10 @@ function OrderConfirmation() {
                               </span>
                             </div>
                           </>
+                        ) : (
+                          <div className="text-gray-500 text-sm">
+                            Tracking information will be available once your order is shipped
+                          </div>
                         )}
                       </div>
                     </div>
@@ -220,7 +222,6 @@ function OrderConfirmation() {
         })}
       </div>
 
-      {/* Back to Home Button */}
       <div className="mt-8 text-center">
         <button
           onClick={() => navigate('/')}
