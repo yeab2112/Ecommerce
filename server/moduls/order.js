@@ -77,7 +77,6 @@ const orderSchema = new mongoose.Schema({
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
-  // Only adding this tracking field while keeping everything else exactly the same
   tracking: {
     carrier: String,
     trackingNumber: String,
