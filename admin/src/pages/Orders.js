@@ -11,12 +11,6 @@ function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage] = useState(10);
   const [isUpdating, setIsUpdating] = useState({});
-  const [showTrackingModal, setShowTrackingModal] = useState(false);
-  const [currentOrder, setCurrentOrder] = useState(null);
-  const [trackingInfo, setTrackingInfo] = useState({
-    carrier: '',
-    trackingNumber: ''
-  });
 
   const atoken = localStorage.getItem('atoken');
 
@@ -47,7 +41,6 @@ function Orders() {
     fetchAllOrders();
   }, [atoken]);
 
-  // Handle status update
   const handleStatusUpdate = async (orderId, newStatus) => {
     if (!orderId || !newStatus) return;
 
@@ -55,14 +48,6 @@ function Orders() {
 
     try {
       let updateData = { status: newStatus };
-
-      // Show tracking modal if status is being changed to shipped
-      if (newStatus === 'shipped') {
-        setCurrentOrder(orderId);
-        setShowTrackingModal(true);
-        setIsUpdating(prev => ({ ...prev, [orderId]: false }));
-        return;
-      }
 
       const response = await axios.put(
         `https://ecommerce-rho-hazel.vercel.app/api/orders/status/${orderId}`,
@@ -95,56 +80,6 @@ function Orders() {
     }
   };
 
-  // Handle shipping order with tracking info
-  const handleShipOrder = async () => {
-    if (!currentOrder) return;
-
-    setIsUpdating(prev => ({ ...prev, [currentOrder]: true }));
-
-    try {
-      const response = await axios.put(
-        `https://ecommerce-rho-hazel.vercel.app/api/orders/status/${currentOrder}`,
-        {
-          status: 'shipped',
-          carrier: trackingInfo.carrier,
-          trackingNumber: trackingInfo.trackingNumber
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${atoken}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.data.success) {
-        setOrders(prev => prev.map(order =>
-          order._id === currentOrder ? {
-            ...order,
-            status: 'shipped',
-            tracking: {
-              carrier: trackingInfo.carrier,
-              trackingNumber: trackingInfo.trackingNumber,
-              updatedAt: new Date().toISOString()
-            },
-            updatedAt: new Date().toISOString()
-          } : order
-        ));
-        toast.success('Order shipped with tracking information');
-        setShowTrackingModal(false);
-        setTrackingInfo({ carrier: '', trackingNumber: '' });
-      } else {
-        throw new Error(response.data.message || 'Failed to ship order');
-      }
-    } catch (err) {
-      console.error('Shipping error:', err);
-      toast.error(err.response?.data?.message || 'Failed to ship order');
-    } finally {
-      setIsUpdating(prev => ({ ...prev, [currentOrder]: false }));
-    }
-  };
-
-  // Filter orders based on search term
   const filteredOrders = orders.filter(order => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -156,7 +91,6 @@ function Orders() {
     );
   });
 
-  // Pagination logic
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
@@ -168,7 +102,6 @@ function Orders() {
     setCurrentPage(pageNumber);
   };
 
-  // Status badge colors
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
@@ -209,7 +142,6 @@ function Orders() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Orders Management</h1>
 
-      {/* Search and Stats */}
       <div className="mb-6 bg-white p-4 rounded-lg shadow">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex-1">
@@ -230,66 +162,6 @@ function Orders() {
         </div>
       </div>
 
-      {/* Tracking Info Modal */}
-      {showTrackingModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">Shipping Details</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Carrier*</label>
-                <select
-                  value={trackingInfo.carrier}
-                  onChange={(e) => setTrackingInfo({...trackingInfo, carrier: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select Carrier</option>
-                  <option value="UPS">UPS</option>
-                  <option value="FedEx">FedEx</option>
-                  <option value="USPS">USPS</option>
-                  <option value="DHL">DHL</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tracking Number*</label>
-                <input
-                  type="text"
-                  value={trackingInfo.trackingNumber}
-                  onChange={(e) => setTrackingInfo({...trackingInfo, trackingNumber: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter tracking number"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowTrackingModal(false);
-                  setTrackingInfo({ carrier: '', trackingNumber: '' });
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleShipOrder}
-                disabled={!trackingInfo.carrier || !trackingInfo.trackingNumber || isUpdating[currentOrder]}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isUpdating[currentOrder] ? 'Processing...' : 'Confirm Shipping'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Orders List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {currentOrders.length > 0 ? (
           <div className="divide-y divide-gray-200">
@@ -325,7 +197,6 @@ function Orders() {
                   </div>
                 </div>
 
-                {/* Customer Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="bg-gray-50 p-3 rounded-md">
                     <h3 className="font-medium text-sm mb-2">CUSTOMER</h3>
@@ -344,65 +215,16 @@ function Orders() {
                   </div>
                 </div>
 
-                {/* Tracking Info (if shipped) */}
-                {(order.status === 'shipped' || order.status === 'delivered') && order.tracking && (
-                  <div className="bg-blue-50 p-3 rounded-md mb-4 border border-blue-100">
-                    <h3 className="font-medium text-sm mb-2">TRACKING INFORMATION</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500">Carrier</p>
-                        <p className="text-sm font-medium">{order.tracking.carrier || 'Not specified'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Tracking #</p>
-                        <p className="text-sm font-medium">{order.tracking.trackingNumber || 'Not available'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Last Update</p>
-                        <p className="text-sm font-medium">
-                          {order.tracking.updatedAt ? 
-                            new Date(order.tracking.updatedAt).toLocaleString() : 
-                            'Not available'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Order Items */}
-                <div className="mb-4">
-                  <h3 className="font-medium text-sm mb-2">ITEMS</h3>
-                  <div className="space-y-3">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="flex items-start gap-4 pb-3 border-b last:border-b-0">
-                        <img 
-                          src={item.image || '/images/product-placeholder.jpg'} 
-                          alt={item.name}
-                          className="w-12 h-12 object-contain rounded border"
-                        />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{item.name}</p>
-                          <div className="grid grid-cols-3 gap-2 text-sm text-gray-600 mt-1">
-                            <p>Qty: {item.quantity}</p>
-                            <p>Size: {item.size}</p>
-                            <p>${item.price.toFixed(2)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Order Summary */}
-                <div className="bg-gray-50 p-3 rounded-md">
-                  <div className="flex justify-between items-center">
+                <div className="bg-blue-50 p-3 rounded-md mb-4 border border-blue-100">
+                  <h3 className="font-medium text-sm mb-2">TRACKING INFORMATION</h3>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <h3 className="font-medium text-sm">PAYMENT METHOD</h3>
-                      <p className="text-sm">{order.paymentMethod}</p>
+                      <p className="text-xs text-gray-500">Carrier</p>
+                      <p className="text-sm font-medium">{order.tracking?.carrier || 'Not available'}</p>
                     </div>
-                    <div className="text-right">
-                      <h3 className="font-medium text-sm">ORDER TOTAL</h3>
-                      <p className="text-lg font-bold">${order.total.toFixed(2)}</p>
+                    <div>
+                      <p className="text-xs text-gray-500">Tracking Number</p>
+                      <p className="text-sm font-medium">{order.tracking?.number || 'Not available'}</p>
                     </div>
                   </div>
                 </div>
@@ -410,63 +232,38 @@ function Orders() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <h3 className="text-lg font-medium text-gray-900">No orders found</h3>
-            <p className="text-sm text-gray-500 mt-1">Try adjusting your search query</p>
-          </div>
+          <div className="text-center p-8 text-gray-500">No orders available</div>
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4">
-          <div className="text-sm text-gray-600">
-            Page {currentPage} of {totalPages}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-4 py-2 border rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let pageNum;
-              if (totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (currentPage <= 3) {
-                pageNum = i + 1;
-              } else if (currentPage >= totalPages - 2) {
-                pageNum = totalPages - 4 + i;
-              } else {
-                pageNum = currentPage - 2 + i;
-              }
-              
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => paginate(pageNum)}
-                  className={`px-4 py-2 border rounded-md w-10 flex items-center justify-center ${
-                    currentPage === pageNum 
-                      ? 'bg-blue-600 text-white border-blue-600' 
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 border rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
-          </div>
+      <div className="mt-4 flex justify-between items-center">
+        <button
+          onClick={() => paginate(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <div className="flex items-center gap-2">
+          <span>Page</span>
+          <input
+            type="number"
+            value={currentPage}
+            onChange={(e) => paginate(Number(e.target.value))}
+            min="1"
+            max={totalPages}
+            className="w-12 text-center border rounded-md px-2 py-1"
+          />
+          <span>of {totalPages}</span>
         </div>
-      )}
+        <button
+          onClick={() => paginate(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }
