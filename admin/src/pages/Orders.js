@@ -15,12 +15,15 @@ function Orders() {
   const atoken = localStorage.getItem('atoken');
 
   useEffect(() => {
+    if (!atoken) {
+      toast.error("Unauthorized. Please log in as admin.");
+      return;
+    }
+
     const fetchAllOrders = async () => {
       try {
         const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/orders/allOrder', {
-          headers: {
-            'Authorization': `Bearer ${atoken}`
-          }
+          headers: { 'Authorization': `Bearer ${atoken}` }
         });
 
         if (response.data.success) {
@@ -42,7 +45,6 @@ function Orders() {
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     if (!orderId || !newStatus) return;
-
     setIsUpdating(prev => ({ ...prev, [orderId]: true }));
 
     try {
@@ -110,53 +112,30 @@ function Orders() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
 
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-md mx-auto">
-          <strong className="font-bold">Error!</strong>
-          <span className="block sm:inline"> {error}</span>
-        </div>
-        <button 
-          onClick={() => window.location.reload()}
-          className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Try Again
-        </button>
+  if (error) return (
+    <div className="text-center py-8">
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-md mx-auto">
+        <strong className="font-bold">Error!</strong><span className="block sm:inline"> {error}</span>
       </div>
-    );
-  }
+      <button onClick={() => window.location.reload()} className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Try Again</button>
+    </div>
+  );
 
   return (
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
       <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Orders Management</h1>
-
-      {/* Search */}
       <div className="mb-6 bg-white p-4 rounded-lg shadow">
         <input
           type="text"
           placeholder="Search orders..."
           className="w-full p-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setCurrentPage(1);
-          }}
+          onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
         />
-        <p className="mt-2 text-sm text-gray-500">
- ({orders.length} total Orders)
-        </p>
+        <p className="mt-2 text-sm text-gray-500">({orders.length} total Orders)</p>
       </div>
-
-      {/* Orders */}
       <div className="space-y-6 mb-6">
         {currentOrders.length > 0 ? (
           currentOrders.map(order => (
@@ -164,20 +143,11 @@ function Orders() {
               <div className="bg-gray-100 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b">
                 <div>
                   <h2 className="font-semibold text-lg">Order #{order._id.slice(-6)}</h2>
-                  <p className="text-sm text-gray-600">
-                    {new Date(order.createdAt).toLocaleString()}
-                  </p>
+                  <p className="text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}</p>
                 </div>
                 <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-                  <span className={`px-2 py-1 text-sm font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                  </span>
-                  <select
-                    value={order.status}
-                    onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
-                    disabled={isUpdating[order._id]}
-                    className="border rounded-md px-2 py-1 text-sm"
-                  >
+                  <span className={`px-2 py-1 text-sm font-semibold rounded-full ${getStatusColor(order.status)}`}>{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
+                  <select value={order.status} onChange={(e) => handleStatusUpdate(order._id, e.target.value)} disabled={isUpdating[order._id]} className="border rounded-md px-2 py-1 text-sm">
                     <option value="pending">Pending</option>
                     <option value="processing">Processing</option>
                     <option value="shipped">Shipped</option>
@@ -186,9 +156,7 @@ function Orders() {
                   </select>
                 </div>
               </div>
-
               <div className="p-4">
-                {/* User & Delivery Info Side-by-Side */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div className="bg-gray-50 p-3 rounded">
                     <p className="font-medium">User Info</p>
@@ -201,18 +169,12 @@ function Orders() {
                     <p><span className="text-gray-600">Address:</span> {order.deliveryInfo?.address}, {order.deliveryInfo?.city}</p>
                   </div>
                 </div>
-
-                {/* Order Items */}
                 <div className="mb-4">
                   <p className="font-medium mb-2">Items</p>
                   <div className="space-y-3">
-                    {order.items.map((item, i) => (
+                    {order.items?.map((item, i) => (
                       <div key={i} className="flex items-start border-b pb-2 last:border-b-0">
-                        <img 
-                          src={item.image || '/placeholder.jpg'} 
-                          alt={item.name}
-                          className="w-14 h-14 object-contain mr-4 border rounded"
-                        />
+                        <img src={item.image || '/placeholder.jpg'} alt={item.name} className="w-14 h-14 object-contain mr-4 border rounded" />
                         <div className="text-sm">
                           <p className="font-medium">{item.name}</p>
                           <div className="grid grid-cols-2 gap-x-6">
@@ -226,8 +188,6 @@ function Orders() {
                     ))}
                   </div>
                 </div>
-
-                {/* Order Summary */}
                 <div className="bg-gray-50 p-3 rounded">
                   <p className="font-medium">Summary</p>
                   <div className="flex justify-between">
@@ -251,37 +211,17 @@ function Orders() {
           </div>
         )}
       </div>
-
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-between items-center mt-6 text-sm">
           <p>
             Showing <strong>{indexOfFirstOrder + 1}</strong> to <strong>{Math.min(indexOfLastOrder, filteredOrders.length)}</strong> of <strong>{filteredOrders.length}</strong> results
           </p>
           <div className="flex gap-2">
-            <button
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              Prev
-            </button>
+            <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50">Prev</button>
             {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => paginate(i + 1)}
-                className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
-              >
-                {i + 1}
-              </button>
+              <button key={i + 1} onClick={() => paginate(i + 1)} className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}>{i + 1}</button>
             ))}
-            <button
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              Next
-            </button>
+            <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50">Next</button>
           </div>
         </div>
       )}

@@ -49,6 +49,12 @@ const orderSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  tracking: {
+    carrier: { type: String },
+    trackingNumber: { type: String },
+    updatedAt: { type: Date }
+  },
+  
   deliveryInfo: {
     type: deliveryInfoSchema,
     required: true

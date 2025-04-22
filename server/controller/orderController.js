@@ -146,7 +146,6 @@ const updateOrderStatus = async (req, res) => {
     const { status } = req.body;
     const { orderId } = req.params;
 
-    // Validate status input
     const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
@@ -155,16 +154,12 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    // Find and update the order
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
-      { 
-        status,
-        updatedAt: new Date() // Update the timestamp
-      },
-      { 
-        new: true, // Return the updated document
-        runValidators: true // Run schema validators
+      { status },
+      {
+        new: true,
+        runValidators: true
       }
     ).populate('user', 'name email');
 
@@ -174,7 +169,6 @@ const updateOrderStatus = async (req, res) => {
         message: 'Order not found'
       });
     }
-
 
     res.json({
       success: true,
@@ -190,6 +184,7 @@ const updateOrderStatus = async (req, res) => {
     });
   }
 };
+
 
 export { createOrder,getOrderTracking, getUserOrders,getAllOrders,updateOrderStatus}
 
