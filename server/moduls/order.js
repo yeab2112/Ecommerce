@@ -2,33 +2,38 @@ import mongoose from 'mongoose';
 import './user.js';
 
 const orderItemSchema = new mongoose.Schema({
-  productId: {
+  product: {  
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
     required: true
   },
   name: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   size: {
     type: String,
-    required: true
+    required: true,
+    uppercase: true,
+    enum: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
   },
   quantity: {
     type: Number,
     required: true,
-    min: 1
+    min: 1,
+    max: 100
   },
   price: {
     type: Number,
     required: true,
-    min: 0
+    min: 0,
+    set: v => parseFloat(v.toFixed(2))
   },
   image: {
-    type: String
-  },
-  
+    type: String,
+    default: '/images/product-placeholder.jpg'
+  }
 });
 
 const deliveryInfoSchema = new mongoose.Schema({
@@ -49,12 +54,6 @@ const orderSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  tracking: {
-    carrier: { type: String },
-    trackingNumber: { type: String },
-    updatedAt: { type: Date }
-  },
-  
   deliveryInfo: {
     type: deliveryInfoSchema,
     required: true
@@ -77,6 +76,12 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
+  },
+  // Only adding this tracking field while keeping everything else exactly the same
+  tracking: {
+    carrier: String,
+    trackingNumber: String,
+    updatedAt: Date
   }
 }, { timestamps: true });
 

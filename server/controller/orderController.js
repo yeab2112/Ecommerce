@@ -81,7 +81,7 @@ const getOrderTracking = async (req, res) => {
     const order = await Order.findOne({
       _id: req.params.orderId,
       user: req.user._id
-    }).select('status tracking');
+    }).select('status tracking updatedAt');
 
     if (!order) {
       return res.status(404).json({
@@ -95,12 +95,13 @@ const getOrderTracking = async (req, res) => {
       status: order.status
     };
 
-    // Add tracking info if available
     if (order.tracking) {
       responseData.trackingInfo = {
-        carrier: order.tracking.carrier,
-        trackingNumber: order.tracking.trackingNumber,
-        updatedAt: order.tracking.updatedAt || order.updatedAt
+        carrier: order.tracking.carrier || 'Not specified',
+        trackingNumber: order.tracking.trackingNumber || 'Not available',
+        updatedAt: order.tracking.updatedAt 
+          ? order.tracking.updatedAt.toISOString() 
+          : order.updatedAt.toISOString()
       };
     }
 
@@ -143,7 +144,7 @@ const getAllOrders = async (req, res) => {
 // Update order status
 const updateOrderStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, carrier, trackingNumber } = req.body;
     const { orderId } = req.params;
 
     const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -154,9 +155,23 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
+    const updateData = { 
+      status,
+      updatedAt: new Date()
+    };
+
+    // Add tracking info when status changes to 'shipped'
+    if (status === 'shipped') {
+      updateData.tracking = {
+        carrier: carrier || 'Standard Shipping',
+        trackingNumber: trackingNumber || 'Not available',
+        updatedAt: new Date()
+      };
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
-      { status },
+      updateData,
       {
         new: true,
         runValidators: true
@@ -184,7 +199,6 @@ const updateOrderStatus = async (req, res) => {
     });
   }
 };
-
 
 export { createOrder,getOrderTracking, getUserOrders,getAllOrders,updateOrderStatus}
 
