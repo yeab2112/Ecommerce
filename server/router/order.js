@@ -1,5 +1,5 @@
 import express from 'express';
-import{ createOrder,getOrderStatus, getUserOrders,getAllOrders,updateOrderStatus} from '../controller/orderController.js';
+import{ createOrder,getOrderTracking, getUserOrders,getAllOrders,updateOrderStatus} from '../controller/orderController.js';
 import authenticateUser from '../middleware/user.js';
 import authoAdmin from "../middleware/autho.js";
 
@@ -10,7 +10,7 @@ orderRoutes.post('/', authenticateUser, createOrder);
 
 // Get all orders for authenticated user
 orderRoutes.get('/user', authenticateUser, getUserOrders);
-orderRoutes.get('/:orderId/status', authenticateUser, getOrderStatus);
+orderRoutes.get('/:orderId/tracking', authenticateUser, getOrderTracking);
 // Admin route to get all orders
 orderRoutes.get('/allOrder', authoAdmin, getAllOrders);
 

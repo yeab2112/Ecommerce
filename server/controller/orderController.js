@@ -75,13 +75,13 @@ const getUserOrders = async (req, res) => {
   }
 };
 
-// Get only order status
-const getOrderStatus = async (req, res) => {
+// Get order status and tracking info
+const getOrderTracking = async (req, res) => {
   try {
     const order = await Order.findOne({
       _id: req.params.orderId,
       user: req.user._id
-    }).select('status');
+    }).select('status tracking');
 
     if (!order) {
       return res.status(404).json({
@@ -90,15 +90,26 @@ const getOrderStatus = async (req, res) => {
       });
     }
 
-    res.json({
+    const responseData = {
       success: true,
       status: order.status
-    });
+    };
+
+    // Add tracking info if available
+    if (order.tracking) {
+      responseData.trackingInfo = {
+        carrier: order.tracking.carrier,
+        trackingNumber: order.tracking.trackingNumber,
+        updatedAt: order.tracking.updatedAt || order.updatedAt
+      };
+    }
+
+    res.json(responseData);
   } catch (error) {
-    console.error('Error fetching order status:', error);
+    console.error('Error fetching order tracking:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching order status'
+      message: 'Server error while fetching order tracking'
     });
   }
 };
@@ -164,8 +175,6 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    // Emit real-time update if using sockets
-    // io.emit('order_updated', updatedOrder);
 
     res.json({
       success: true,
@@ -182,5 +191,5 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
-export { createOrder,getOrderStatus, getUserOrders,getAllOrders,updateOrderStatus}
+export { createOrder,getOrderTracking, getUserOrders,getAllOrders,updateOrderStatus}
 

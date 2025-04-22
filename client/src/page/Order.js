@@ -9,7 +9,7 @@ function OrderConfirmation() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [trackingInfo, setTrackingInfo] = useState({});
+  const [trackingData, setTrackingData] = useState({});
   const [loadingOrders, setLoadingOrders] = useState({});
 
   useEffect(() => {
@@ -44,7 +44,7 @@ function OrderConfirmation() {
     fetchUserOrders();
   }, [token, navigate]);
 
-  const fetchOrderTracking = async (orderId) => {
+  const fetchTrackingInfo = async (orderId) => {
     if (!token) {
       navigate('/login');
       return;
@@ -53,19 +53,21 @@ function OrderConfirmation() {
     setLoadingOrders(prev => ({ ...prev, [orderId]: true }));
 
     try {
-      const response = await axios.get(`https://ecommerce-rho-hazel.vercel.app/api/orders/${orderId}/tracking`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axios.get(
+        `https://ecommerce-rho-hazel.vercel.app/api/orders/${orderId}/tracking`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
 
       if (response.data.success) {
-        setTrackingInfo(prev => ({
+        setTrackingData(prev => ({
           ...prev,
-          [orderId]: response.data.trackingInfo
+          [orderId]: {
+            status: response.data.status, // Assuming your API now returns status too
+            trackingInfo: response.data.trackingInfo
+          }
         }));
       } else {
-        toast.error(response.data.message || 'Failed to fetch tracking info');
+        toast.error(response.data.message || 'Failed to fetch tracking information');
       }
     } catch (err) {
       console.error('Error fetching tracking info:', err);
@@ -76,6 +78,7 @@ function OrderConfirmation() {
   };
 
   const getStatusColor = (status) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'processing': return 'bg-blue-100 text-blue-800';
@@ -95,7 +98,10 @@ function OrderConfirmation() {
       <div className="max-w-6xl mx-auto p-6 text-center">
         <h2 className="text-xl text-gray-700">No orders found</h2>
         <p className="text-gray-500 mt-2">You haven't placed any orders yet.</p>
-        <button onClick={() => navigate('/')} className="mt-4 bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition-colors">
+        <button 
+          onClick={() => navigate('/')} 
+          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+        >
           Return to Home
         </button>
       </div>
@@ -155,10 +161,9 @@ function OrderConfirmation() {
                       <p className="text-gray-600">Quantity: {item.quantity}</p>
                     </div>
 
-                    {/* Price - Stacked on small screens, side by side on larger */}
-                    <div className="flex flex-col md:items-end">
+                    {/* Price - No text on small devices */}
+                    <div className="flex items-center justify-end">
                       <p className="font-medium">{currency}{item.price.toFixed(2)}</p>
-                      <p className="text-sm text-gray-500 md:hidden">Price</p>
                     </div>
                   </div>
                 ))}
@@ -168,7 +173,7 @@ function OrderConfirmation() {
               <div className="bg-gray-50 p-4 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="w-full md:w-auto">
                   <button
-                    onClick={() => fetchOrderTracking(order._id)}
+                    onClick={() => fetchTrackingInfo(order._id)}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors duration-200 w-full md:w-auto"
                     disabled={loadingOrders[order._id]}
                   >
@@ -178,18 +183,33 @@ function OrderConfirmation() {
                 
                 <div className="text-right w-full md:w-auto">
                   <p className="text-lg font-medium">Total: {currency}{order.total.toFixed(2)}</p>
-                  {trackingInfo[order._id] && (
-                    <div className="mt-2 p-3 bg-white rounded-md border text-sm">
-                      <h4 className="font-medium mb-1">Tracking Information</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <span className="text-gray-600">Carrier:</span>
-                        <span>{trackingInfo[order._id].carrier}</span>
-                        <span className="text-gray-600">Tracking #:</span>
-                        <span>{trackingInfo[order._id].trackingNumber}</span>
-                        <span className="text-gray-600">Status:</span>
-                        <span>{trackingInfo[order._id].status}</span>
-                        <span className="text-gray-600">Last Update:</span>
-                        <span>{new Date(trackingInfo[order._id].updatedAt).toLocaleString()}</span>
+                  {trackingData[order._id] && (
+                    <div className="mt-2 p-3 bg-white rounded-md border">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Current Status:</span>
+                          <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(trackingData[order._id].status)}`}>
+                            {trackingData[order._id].status}
+                          </span>
+                        </div>
+                        {trackingData[order._id].trackingInfo && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Carrier:</span>
+                              <span>{trackingData[order._id].trackingInfo.carrier}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Tracking #:</span>
+                              <span>{trackingData[order._id].trackingInfo.trackingNumber}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Last Update:</span>
+                              <span>
+                                {new Date(trackingData[order._id].trackingInfo.updatedAt).toLocaleString()}
+                              </span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
