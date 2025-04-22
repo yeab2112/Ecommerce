@@ -7,7 +7,7 @@ function Sidebar() {
   const { addicon, listicon, order } = asset;
 
   return (
-    <div className="flex flex-col w-48 h-screen bg-white border-r border-gray-200 text-gray-800 p-4 space-y-2 shadow-lg">
+    <div className="flex flex-col w-48 bg-white border-r border-gray-200 text-gray-800 p-4 space-y-2 shadow-lg">
       {/* Add Icon with Text */}
       <Link
         to="/add"
