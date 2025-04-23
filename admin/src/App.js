@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from "./Components/Navbar";
-import Sidebar from "./Components/Sidebare";
+import Sidebar from "./Components/Sidebare"; // Make sure the import name matches your file
 import Add from "./pages/Add";
 import List from "./pages/List";
 import Orders from "./pages/Orders";
@@ -15,6 +15,7 @@ function App() {
     email: 'admin@example.com',
     avatar: ''
   });
+  const location = useLocation();
 
   useEffect(() => {
     const atoken = localStorage.getItem('atoken');
@@ -22,6 +23,11 @@ function App() {
       setIsAuthenticated(true);
     }
   }, []);
+
+  // Close sidebar when route changes (on mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location]);
 
   const handleLogin = (atoken) => {
     localStorage.setItem('atoken', atoken);
@@ -48,13 +54,24 @@ function App() {
             user={user} 
             onToggleSidebar={toggleSidebar} 
           />
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 overflow-hidden relative">
+            {/* Sidebar with proper mobile styling */}
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            
+            {/* Main content with click overlay for mobile */}
+            {sidebarOpen && (
+              <div 
+                className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+                onClick={() => setSidebarOpen(false)}
+              />
+            )}
+            
             <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
               <Routes>
                 <Route path="/add" element={<Add />} />
                 <Route path="/list" element={<List />} />
                 <Route path="/order" element={<Orders />} />
+                <Route path="*" element={<Navigate to="/list" replace />} />
               </Routes>
             </main>
           </div>

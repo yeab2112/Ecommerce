@@ -7,18 +7,10 @@ function Sidebar({ isOpen, onClose }) {
 
   return (
     <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div
-          onClick={onClose}
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Mobile Sidebar */}
       <div className={`
         fixed md:relative
-        top-0 left-0 bottom-0
+        inset-y-0 left-0
         w-64
         bg-white
         border-r border-gray-200
@@ -28,7 +20,7 @@ function Sidebar({ isOpen, onClose }) {
         z-30
         overflow-y-auto
       `}>
-        <div className="p-4 space-y-3 h-full">
+        <div className="p-4 space-y-3">
           {/* Close Button (mobile only) */}
           <button
             onClick={onClose}
