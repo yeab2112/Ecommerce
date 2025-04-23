@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css'; 
-import { TrashIcon, PencilIcon } from '@heroicons/react/outline'; 
+import { TrashIcon, PencilIcon } from '@heroicons/react/outline';
 
 const List = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingProduct, setEditingProduct] = useState(null); // State to hold the product being edited
-  const [editFormData, setEditFormData] = useState({ name: '', category: '', price: '' }); // Form data
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editFormData, setEditFormData] = useState({ name: '', category: '', price: '' });
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -38,7 +38,6 @@ const List = () => {
     fetchProducts();
   }, []);
 
-  // Function to handle deleting a product
   const handleDelete = async (productId) => {
     try {
       const atoken = localStorage.getItem('atoken');
@@ -52,40 +51,41 @@ const List = () => {
         setProducts(products.filter((product) => product._id !== productId));
         toast.success('Product deleted successfully');
       } else {
-        setError('Failed to delete the product');
         toast.error('Failed to delete the product');
       }
     } catch (err) {
-      setError('An error occurred while deleting the product');
       toast.error('An error occurred while deleting the product');
     }
   };
 
-  // Handle form changes for the product edit
   const handleEditChange = (e) => {
     setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
   };
 
-  // Open edit form with the current product data
   const openEditForm = (product) => {
     setEditingProduct(product);
     setEditFormData({ name: product.name, category: product.category, price: product.price });
   };
 
-  // Submit the edited product
   const handleEditSubmit = async () => {
     try {
       const atoken = localStorage.getItem('atoken');
-      const response = await axios.put(`https://ecommerce-rho-hazel.vercel.app/api/product/update_product/${editingProduct._id}`, editFormData, {
-        headers: {
-          Authorization: `Bearer ${atoken}`,
-        },
-      });
+      const response = await axios.put(
+        `https://ecommerce-rho-hazel.vercel.app/api/product/update_product/${editingProduct._id}`,
+        editFormData,
+        {
+          headers: {
+            Authorization: `Bearer ${atoken}`,
+          },
+        }
+      );
 
       if (response.data.success) {
-        setProducts(products.map((product) => (product._id === editingProduct._id ? { ...product, ...editFormData } : product)));
+        setProducts(products.map((product) => 
+          product._id === editingProduct._id ? { ...product, ...editFormData } : product
+        ));
         toast.success('Product updated successfully');
-        setEditingProduct(null); // Close the edit form
+        setEditingProduct(null);
       } else {
         toast.error('Failed to update product');
       }
@@ -95,105 +95,146 @@ const List = () => {
   };
 
   if (loading) {
-    return <div className="text-center text-lg">Loading...</div>;
+    return <div className="text-center text-lg py-8">Loading...</div>;
   }
 
   if (error) {
-    return <div className="text-center text-red-500">{error}</div>;
+    return <div className="text-center text-red-500 py-8">{error}</div>;
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold text-center mb-6">Product List</h1>
+    <div className="container mx-auto px-4 py-6">
+      <h1 className="text-2xl md:text-3xl font-bold text-center mb-6">Product List</h1>
 
-      {/* Product List */}
-      <div className="grid grid-cols-6 gap-4 mb-4 border-b-4 pb-2">
-        <span className="font-semibold text-center">Image</span>
-        <span className="font-semibold text-center">Name</span>
-        <span className="font-semibold text-center">Category</span>
-        <span className="font-semibold text-center">Price</span>
-        <span className="font-semibold text-center">Action</span>
-      </div>
+      {/* Responsive Product List */}
+      <div className="overflow-x-auto">
+        {/* Desktop Table Headers */}
+        <div className="hidden md:grid md:grid-cols-6 gap-4 mb-4 border-b-4 pb-2">
+          <span className="font-semibold text-center">Image</span>
+          <span className="font-semibold text-center">Name</span>
+          <span className="font-semibold text-center">Category</span>
+          <span className="font-semibold text-center">Price</span>
+          <span className="font-semibold text-center col-span-2">Actions</span>
+        </div>
 
-      {products.length === 0 ? (
-        <div className="text-center text-lg text-gray-500">No products available</div>
-      ) : (
-        products.map((product) => (
-          <div key={product._id} className="grid grid-cols-6 gap-4 py-4 border-b">
-            <img
-              src={product.images[0]} // Display the first image
-              alt={product.name}
-              className="w-16 h-16 object-cover rounded-md mx-auto"
-            />
-            <span className="text-center">{product.name}</span>
-            <span className="text-center">{product.category}</span>
-            <span className="text-center">${product.price}</span>
-            <div className="flex justify-center">
-              {/* Edit button */}
-              <PencilIcon
-                onClick={() => openEditForm(product)}
-                className="w-6 h-6 text-blue-500 cursor-pointer hover:text-blue-600"
-              />
-              {/* Delete button */}
-              <TrashIcon
-                onClick={() => handleDelete(product._id)}
-                className="w-6 h-6 text-red-500 cursor-pointer hover:text-red-600"
-              />
-            </div>
+        {products.length === 0 ? (
+          <div className="text-center text-lg text-gray-500 py-8">No products available</div>
+        ) : (
+          <div className="space-y-4">
+            {products.map((product) => (
+              <div 
+                key={product._id} 
+                className="md:grid md:grid-cols-6 gap-4 p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              >
+                {/* Product Image */}
+                <div className="flex justify-center mb-3 md:mb-0">
+                  <img
+                    src={product.images[0]}
+                    alt={product.name}
+                    className="w-16 h-16 object-cover rounded-md"
+                  />
+                </div>
+
+                {/* Product Info - Stacked on mobile */}
+                <div className="md:contents">
+                  <div className="flex justify-between mb-2 md:hidden">
+                    <span className="font-semibold">Name:</span>
+                    <span className="text-right">{product.name}</span>
+                  </div>
+                  <div className="hidden md:block md:text-center">
+                    {product.name}
+                  </div>
+
+                  <div className="flex justify-between mb-2 md:hidden">
+                    <span className="font-semibold">Category:</span>
+                    <span className="text-right">{product.category}</span>
+                  </div>
+                  <div className="hidden md:block md:text-center">
+                    {product.category}
+                  </div>
+
+                  <div className="flex justify-between mb-3 md:hidden">
+                    <span className="font-semibold">Price:</span>
+                    <span className="text-right">${product.price}</span>
+                  </div>
+                  <div className="hidden md:block md:text-center">
+                    ${product.price}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end md:justify-center space-x-4 md:col-span-2">
+                  <button
+                    onClick={() => openEditForm(product)}
+                    className="text-blue-500 hover:text-blue-700"
+                    aria-label="Edit"
+                  >
+                    <PencilIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(product._id)}
+                    className="text-red-500 hover:text-red-700"
+                    aria-label="Delete"
+                  >
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        ))
-      )}
+        )}
+      </div>
 
       {/* Edit Product Modal */}
       {editingProduct && (
-        <div className="fixed inset-0 flex justify-center items-center bg-gray-700 bg-opacity-50">
-          <div className="bg-white p-6 rounded-lg w-96">
+        <div className="fixed inset-0 flex justify-center items-center bg-gray-700 bg-opacity-50 z-50 p-4">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">Edit Product</h2>
             <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-semibold">Name</label>
+              <label htmlFor="name" className="block text-sm font-semibold mb-1">Name</label>
               <input
                 type="text"
                 id="name"
                 name="name"
                 value={editFormData.name}
                 onChange={handleEditChange}
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div className="mb-4">
-              <label htmlFor="category" className="block text-sm font-semibold">Category</label>
+              <label htmlFor="category" className="block text-sm font-semibold mb-1">Category</label>
               <input
                 type="text"
                 id="category"
                 name="category"
                 value={editFormData.category}
                 onChange={handleEditChange}
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div className="mb-4">
-              <label htmlFor="price" className="block text-sm font-semibold">Price</label>
+              <label htmlFor="price" className="block text-sm font-semibold mb-1">Price</label>
               <input
                 type="number"
                 id="price"
                 name="price"
                 value={editFormData.price}
                 onChange={handleEditChange}
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="flex justify-end">
-              <button
-                onClick={handleEditSubmit}
-                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-              >
-                Save
-              </button>
+            <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setEditingProduct(null)}
-                className="ml-2 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
               >
                 Cancel
+              </button>
+              <button
+                onClick={handleEditSubmit}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+              >
+                Save
               </button>
             </div>
           </div>
