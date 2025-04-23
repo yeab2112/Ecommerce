@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from "./Components/Navbar";
-import Sidebar from "./Components/Sidebar";
+import Sidebar from "./Components/Sidebar"; // Make sure the filename is correct
 import Add from "./pages/Add";
 import List from "./pages/List";
 import Orders from "./pages/Orders";
@@ -9,17 +9,12 @@ import Login from "./Components/Login";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const location = useLocation();
 
   useEffect(() => {
-    const verifyAuth = async () => {
-      const atoken = localStorage.getItem('atoken');
-      // Add your actual token verification logic here
-      setIsAuthenticated(!!atoken);
-      setIsLoading(false);
-    };
-    verifyAuth();
+    const atoken = localStorage.getItem('atoken');
+    if (atoken) {
+      setIsAuthenticated(true);
+    }
   }, []);
 
   const handleLogin = (atoken) => {
@@ -32,25 +27,21 @@ function App() {
     setIsAuthenticated(false);
   };
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  }
-
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <div className="flex flex-col min-h-screen">
       {!isAuthenticated ? (
         <Login onLogin={handleLogin} />
       ) : (
         <>
           <Navbar onLogout={handleLogout} />
-          <div className="flex flex-1 overflow-hidden">
+          {/* Adjust height: assumes navbar is 64px tall */}
+          <div className="flex flex-1 h-[calc(100vh-64px)]">
             <Sidebar />
-            <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
-              <Routes location={location} key={location.pathname}>
-                <Route path="/add" element={<Add />} />
-                <Route path="/list" element={<List />} />
-                <Route path="/order" element={<Orders />} />
-                <Route path="*" element={<Navigate to="/list" replace />} />
+            <main className="flex-1 p-4 sm:p-6 bg-gray-100 overflow-y-auto">
+              <Routes>
+                <Route path="/add" element={isAuthenticated ? <Add /> : <Navigate to="/" />} />
+                <Route path="/list" element={isAuthenticated ? <List /> : <Navigate to="/" />} />
+                <Route path="/order" element={isAuthenticated ? <Orders /> : <Navigate to="/" />} />
               </Routes>
             </main>
           </div>
