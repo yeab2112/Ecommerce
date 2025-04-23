@@ -1,47 +1,44 @@
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from "./Components/Navbar";
-import Sidebar from "./Components/Sidebare"; // Fixed typo (Sidebare -> Sidebar)
+import Sidebar from "./Components/Sidebar"; // Make sure the filename is correct
 import Add from "./pages/Add";
 import List from "./pages/List";
 import Orders from "./pages/Orders";
-import { Routes, Route, Navigate } from 'react-router-dom';  // Import Navigate for redirection
-import React, { useState, useEffect } from 'react';
 import Login from "./Components/Login";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check for token on initial load
   useEffect(() => {
-    const atoken = localStorage.getItem('atoken'); // Retrieve token from localStorage
+    const atoken = localStorage.getItem('atoken');
     if (atoken) {
-      setIsAuthenticated(true); // Set authenticated to true if token exists
+      setIsAuthenticated(true);
     }
   }, []);
 
-  // Handle login (set token and update state)
   const handleLogin = (atoken) => {
-    localStorage.setItem('atoken', atoken); // Store token in localStorage
-    setIsAuthenticated(true); // Update authentication state
+    localStorage.setItem('atoken', atoken);
+    setIsAuthenticated(true);
   };
 
   const handleLogout = () => {
-    console.log("Logout triggered");
     localStorage.removeItem('atoken');
     setIsAuthenticated(false);
   };
 
   return (
-    <div className="flex flex-col ">
+    <div className="flex flex-col min-h-screen">
       {!isAuthenticated ? (
         <Login onLogin={handleLogin} />
       ) : (
         <>
           <Navbar onLogout={handleLogout} />
-          <div className="flex flex-1 overflow-hidden">
+          {/* Adjust height: assumes navbar is 64px tall */}
+          <div className="flex flex-1 h-[calc(100vh-64px)]">
             <Sidebar />
-            <main className="flex-1 p-6 bg-gray-100">
+            <main className="flex-1 p-4 sm:p-6 bg-gray-100 overflow-y-auto">
               <Routes>
-                {/* Add a route for protected pages */}
                 <Route path="/add" element={isAuthenticated ? <Add /> : <Navigate to="/" />} />
                 <Route path="/list" element={isAuthenticated ? <List /> : <Navigate to="/" />} />
                 <Route path="/order" element={isAuthenticated ? <Orders /> : <Navigate to="/" />} />
@@ -52,7 +49,6 @@ function App() {
       )}
     </div>
   );
-  
 }
 
 export default App;
