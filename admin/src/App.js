@@ -55,7 +55,6 @@ function App() {
                 <Route path="/add" element={<Add />} />
                 <Route path="/list" element={<List />} />
                 <Route path="/order" element={<Orders />} />
-                <Route path="*" element={<Navigate to="/list" replace />} />
               </Routes>
             </main>
           </div>
