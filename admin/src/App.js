@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from "./Components/Navbar";
 import Sidebar from "./Components/Sidebare";
 import Add from "./pages/Add";
@@ -9,17 +9,18 @@ import Login from "./Components/Login";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState({
+    name: 'Admin User',
+    email: 'admin@example.com',
+    avatar: ''
+  });
 
   useEffect(() => {
-    const verifyAuth = async () => {
-      const atoken = localStorage.getItem('atoken');
-      // Add your actual token verification logic here
-      setIsAuthenticated(!!atoken);
-      setIsLoading(false);
-    };
-    verifyAuth();
+    const atoken = localStorage.getItem('atoken');
+    if (atoken) {
+      setIsAuthenticated(true);
+    }
   }, []);
 
   const handleLogin = (atoken) => {
@@ -32,9 +33,9 @@ function App() {
     setIsAuthenticated(false);
   };
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  }
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
@@ -42,11 +43,15 @@ function App() {
         <Login onLogin={handleLogin} />
       ) : (
         <>
-          <Navbar onLogout={handleLogout} />
+          <Navbar 
+            onLogout={handleLogout} 
+            user={user} 
+            onToggleSidebar={toggleSidebar} 
+          />
           <div className="flex flex-1 overflow-hidden">
-            <Sidebar />
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
-              <Routes location={location} key={location.pathname}>
+              <Routes>
                 <Route path="/add" element={<Add />} />
                 <Route path="/list" element={<List />} />
                 <Route path="/order" element={<Orders />} />
