@@ -86,7 +86,7 @@ function PlaceOrder() {
         deliveryInfo,
         paymentMethod,
         items: cart.map(item => ({
-          productId: item._id,
+          product: item._id,
           size: item.size,
           quantity: item.quantity,
           price: item.price,
