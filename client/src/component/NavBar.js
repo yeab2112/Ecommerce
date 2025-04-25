@@ -13,8 +13,9 @@ function NavBar() {
   const MySwal = withReactContent(Swal);
 
   // Accessing context values
-  const { setShowSearch, cart, token, setToken } = useContext(ShopContext); 
+  const { setShowSearch, cart, token, setToken } = useContext(ShopContext);
   const handleLogout = () => {
+    setIsDropdownVisible(false)
     MySwal.fire({
       title: "Are you sure?",
       text: "You want to Exit!",
@@ -140,15 +141,25 @@ function NavBar() {
               />
               {isDropdownVisible && (
                 <div className="absolute right-0 bg-white shadow-lg rounded-lg p-4 mt-2 w-40 z-20">
+
                   <p
                     className="cursor-pointer hover:text-blue-500"
-                    onClick={() => navigate('/profile')}
+                    onClick={() => {
+                      navigate('/profile');
+                      setIsDropdownVisible(false); // Close dropdown when navigating
+                    }}
                   >
                     My Profile
                   </p>
                   <p
                     className="cursor-pointer hover:text-blue-500"
-                    onClick={() => navigate('/order-confirmation')}
+                    onClick={() =>{
+                      navigate('/order-confirmation');
+                      setIsDropdownVisible(false); // Close dropdown when navigating
+
+                    }
+                      
+                    }
                   >
                     Orders
                   </p>

@@ -1,5 +1,4 @@
 import { UserModel } from "../moduls/user.js"; 
-import { validationResult } from "express-validator"; 
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -116,10 +115,63 @@ const AdminLogin = async (req, res) => {
   }
 };
 
+const getCurrentUser = async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.user._id)
+      .select('-password -__v -createdAt -updatedAt');
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
 
-// Authenticated User Info
-const Auth = (req, res) => { 
-  return res.status(200).json({ success: true, user: { ...req.user._doc } });
+    res.status(200).json({ success: true, user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+const updateUserProfile = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  try {
+    const { name, phone, address } = req.body;
+    const updateFields = {};
+
+    if (name) updateFields.name = name;
+    if (phone) updateFields.phone = phone;
+    if (address) {
+      updateFields.address = {
+        street: address.street || '',
+        city: address.city || '',
+        state: address.state || '',
+        zipCode: address.zipCode || '',
+        country: address.country || ''
+      };
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    ).select('-password -__v');
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Profile updated successfully',
+      user: updatedUser 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
 };
 
 // Forgot Password
@@ -191,4 +243,4 @@ const Reset = async (req, res) => {
   res.send('Password has been reset');
 };
 
-export { UserLogin, UserRegister, AdminLogin, Auth, Forgetpassword, Reset };
+export { UserLogin, UserRegister, AdminLogin, getCurrentUser,updateUserProfile, Forgetpassword, Reset };

@@ -1,7 +1,7 @@
 import express from "express"
+import authenticateUser from"../middleware/user.js"
 import { Forgetpassword, Reset } from "../controller/user.js"
-import { UserLogin,UserRegister,AdminLogin } from "../controller/user.js"
-import { Auth } from "../controller/user.js"
+import { UserLogin,UserRegister,AdminLogin , getCurrentUser,updateUserProfile} from "../controller/user.js"
 const userRouter=express.Router()
 
 import { body, validationResult } from 'express-validator';
@@ -34,16 +34,12 @@ userRouter.post('/register', [
   }
   next();
 }, UserRegister); // Proceed to the UserRegister function if validation passes
-
-
-
-//  product
-
-
 userRouter.post('/login', UserLogin)
 userRouter.post('/signup', UserRegister)
 userRouter.post('/admin_login', AdminLogin)
-
+userRouter.get('/me', authenticateUser, getCurrentUser);
+// Update user profile
+userRouter.put('/update', authenticateUser, updateUserProfile);
 
 
 

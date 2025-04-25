@@ -8,7 +8,7 @@ import { ShopContext } from '../context/ShopContext';
 const Product = () => {
   const { productId } = useParams(); 
   const [product, setProduct] = useState(null);
-  const { products, addToCart, currency } = useContext(ShopContext);
+  const { products, addToCart} = useContext(ShopContext);
   const [currentImage, setCurrentImage] = useState(null);
   const [selectedSize, setSelectedSize] = useState('');
   const [error, setError] = useState('');

@@ -17,14 +17,13 @@ function ShopContextProvider({ children }) {
   const [showSearch, setShowSearch] = useState(false);
   const [cart, setCart] = useState([]);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [user, setUser] = useState(null);
+
   // Fetch all products
   const getProducts = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/product/list_products');
-  
-      console.log('API Response:', response.data);
-  
       if (response.data.success) {
         setProducts(response.data.products);
       } else {
@@ -38,7 +37,31 @@ function ShopContextProvider({ children }) {
       setLoading(false);
     }
   }, []);
-  
+
+  // Fetch user data
+  const fetchUserData = useCallback(async () => {
+    if (!token) {
+      setUser(null);
+      return;
+    }
+
+    try {
+      const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/user/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setUser(response.data.user);
+      } else {
+        throw new Error(response.data.message || 'Failed to fetch user data');
+      }
+    } catch (error) {
+      console.error('User fetch error:', error);
+      toast.error(error.response?.data?.message || 'Failed to load user data');
+      setUser(null);
+    }
+  }, [token]);
+
   // Fetch cart from API
   const fetchCart = useCallback(async () => {
     if (!token) {
@@ -92,8 +115,9 @@ function ShopContextProvider({ children }) {
     getProducts();
     if (token) {
       fetchCart();
+      fetchUserData();
     }
-  }, [getProducts, fetchCart, token]);
+  }, [getProducts, fetchCart, fetchUserData, token]);
 
   // Add to cart function
   const addToCart = async (productId, size) => {
@@ -119,12 +143,7 @@ function ShopContextProvider({ children }) {
       const response = await axios.post(
         'https://ecommerce-rho-hazel.vercel.app/api/cart/add',
         { productId, size: normalizedSize },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
+        { headers: { 'Authorization': `Bearer ${token}` } }
       );
   
       if (response.data.message === 'Product added to cart successfully!') {
@@ -155,7 +174,6 @@ function ShopContextProvider({ children }) {
       }
   
       throw new Error(response.data.message || 'Failed to add to cart');
-  
     } catch (error) {
       console.error('Add to cart error:', error);
       toast.update(toastId, {
@@ -183,17 +201,8 @@ function ShopContextProvider({ children }) {
   
       const response = await axios.put(
         'https://ecommerce-rho-hazel.vercel.app/api/cart/update',
-        { 
-          productId, 
-          size: normalizedSize, 
-          quantity: quantityNumber 
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
+        { productId, size: normalizedSize, quantity: quantityNumber },
+        { headers: { 'Authorization': `Bearer ${token}` } }
       );
   
       if (response.data.success) {
@@ -206,10 +215,7 @@ function ShopContextProvider({ children }) {
   
           return prevCart.map(item => {
             if (item.cartKey === cartKey) {
-              return { 
-                ...item, 
-                quantity: quantityNumber 
-              };
+              return { ...item, quantity: quantityNumber };
             }
             return item;
           });
@@ -225,7 +231,6 @@ function ShopContextProvider({ children }) {
       }
   
       throw new Error(response.data.message || 'Failed to update cart');
-  
     } catch (error) {
       console.error('Update cart error:', error);
       toast.update(toastId, {
@@ -286,7 +291,10 @@ function ShopContextProvider({ children }) {
     setToken,
     token,
     loading,
-    error
+    error,
+    user,
+    setUser,
+    fetchUserData
   };
 
   return <ShopContext.Provider value={contextValue}>{children}</ShopContext.Provider>;

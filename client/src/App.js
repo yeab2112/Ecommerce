@@ -15,6 +15,8 @@ import Collection from './page/Collection.js';
 import PlaceOrder from './page/PlaceOrder.js';
 import Order from './page/Order.js';
 import SearchBar from './component/searchBar.js';
+import Profile from "./page/Profile.js";
+import EditProfile from "./page/EditProfile.js";
 
 export const AuthContext = createContext(null);
 
@@ -38,6 +40,8 @@ function App() {
         <Route path='/logout' element={<Logout />} />
         <Route path='/login' element={<AuthPage />} />
         <Route path='/signup' element={<AuthPage />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/edit-profile" element={<EditProfile />} />
       </Routes>
       <Footer />
     </div>
