@@ -49,7 +49,8 @@ function ShopContextProvider({ children }) {
       const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/user/me', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+      console.log('Full API response:', response.data); 
+
       if (response.data.success) {
         setUser(response.data.user);
       } else {

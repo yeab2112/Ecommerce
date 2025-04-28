@@ -1,4 +1,5 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import './order.js'; 
 
 const UserSchema = new mongoose.Schema({
     name: {
@@ -14,11 +15,16 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    orders: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Order'  // Must match mongoose.model('Order', ...)
+    }],
     cartdata: {
         type: Object,
         default: {}
     }
 }, { minimize: false });
 
-// Export both the model and schema if needed
-export const UserModel = mongoose.model('User', UserSchema);
+// ✅ Compile the schema into a model
+const UserModel = mongoose.model('User', UserSchema);
+export default UserModel;

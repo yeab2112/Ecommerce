@@ -7,7 +7,6 @@ import { Routes, Route } from 'react-router-dom';
 import { ToastContainer } from "react-toastify";
 import Contact from './page/Contact.js';
 import Footer from './component/footer.js';
-import Logout from './page/logout';
 import 'react-toastify/dist/ReactToastify.min.css';
 import Cart from './page/Cart.js';
 import Product from './page/Product.js';
@@ -37,7 +36,6 @@ function App() {
         <Route path='/place-order' element={<PlaceOrder />} />
         <Route path='/order-confirmation' element={<Order />} />
         <Route path='/order-confirmation/:orderId' element={<Order />} />
-        <Route path='/logout' element={<Logout />} />
         <Route path='/login' element={<AuthPage />} />
         <Route path='/signup' element={<AuthPage />} />
         <Route path="/profile" element={<Profile />} />

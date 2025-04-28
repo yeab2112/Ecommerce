@@ -1,4 +1,4 @@
-import { UserModel } from "../moduls/user.js"; 
+import  UserModel  from "../moduls/user.js"; 
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -118,7 +118,14 @@ const AdminLogin = async (req, res) => {
 const getCurrentUser = async (req, res) => {
   try {
     const user = await UserModel.findById(req.user._id)
-      .select('-password -__v -createdAt -updatedAt');
+    .select('-password -__v -createdAt -updatedAt')
+    .populate({
+      path: 'orders',
+      options: { sort: { createdAt: -1 }, limit: 10 }
+    });
+  
+  console.log('Populated user:', user);  // Log to check if orders are populated
+  
     
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -141,6 +148,7 @@ const updateUserProfile = async (req, res) => {
     const { name, phone, address } = req.body;
     const updateFields = {};
 
+    // Validate and set update fields
     if (name) updateFields.name = name;
     if (phone) updateFields.phone = phone;
     if (address) {
@@ -153,27 +161,59 @@ const updateUserProfile = async (req, res) => {
       };
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
+    // Use UserModel instead of User for consistency
+    const updatedUser = await UserModel.findByIdAndUpdate(
       req.user._id,
       { $set: updateFields },
-      { new: true, runValidators: true }
-    ).select('-password -__v');
+      { 
+        new: true, 
+        runValidators: true,
+        select: '-password -__v -orders' // Exclude sensitive/unnecessary fields
+      }
+    );
 
     if (!updatedUser) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
+    // Optionally populate orders if needed
+    const userWithOrders = await UserModel.populate(updatedUser, {
+      path: 'orders',
+      select: 'status total createdAt',
+      options: { limit: 5, sort: { createdAt: -1 } }
+    });
+
     res.status(200).json({ 
       success: true, 
       message: 'Profile updated successfully',
-      user: updatedUser 
+      user: userWithOrders 
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    console.error('Profile update error:', error);
+    
+    // Handle specific errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Validation failed',
+        errors: Object.values(error.errors).map(err => err.message) 
+      });
+    }
+    
+    if (error.code === 11000) { // Duplicate key error
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email already exists' 
+      });
+    }
+
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
-
 // Forgot Password
 const Forgetpassword = async (req, res) => {
   try {

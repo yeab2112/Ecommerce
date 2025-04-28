@@ -1,4 +1,4 @@
-import { UserModel } from "../moduls/user.js";
+import  UserModel  from "../moduls/user.js";
 import { Product } from "../moduls/product.js";
 import mongoose from 'mongoose'; 
 const getCart = async (req, res) => {

@@ -89,7 +89,7 @@ function Profile() {
               Edit Profile
             </button>
             <button
-              onClick={() => navigate('/orders')}
+              onClick={() => navigate('/order-confirmation')}
               className="bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition"
             >
               View Orders

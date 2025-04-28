@@ -1,5 +1,5 @@
 import  Order  from "../moduls/order.js";
-import { UserModel } from "../moduls/user.js";
+import  UserModel  from "../moduls/user.js";
 // Create a new order
  const createOrder = async (req, res) => {
   try {
