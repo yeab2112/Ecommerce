@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import validator from 'validator';  // Import the validator package
-
+import Order from "../moduls/order.js";
 dotenv.config({ path: './config/.env' });
 
 const UserRegister = async (req, res) => {
@@ -115,29 +115,59 @@ const AdminLogin = async (req, res) => {
   }
 };
 
+
 const getCurrentUser = async (req, res) => {
   try {
-    const user = await UserModel.findById(req.user._id)
-    .select('-password -__v -createdAt -updatedAt')
-    .populate({
+    // 1. Find user and populate orders with all needed fields
+    const user = await UserModel.findById(req.user._id).populate({
       path: 'orders',
-      options: { sort: { createdAt: -1 }, limit: 10 }
+      select: 'deliveryInfo items total createdAt status paymentMethod',
+      options: { sort: { createdAt: -1 } } // Sort orders by date (newest first)
     });
-  
-  console.log('Populated user:', user);  // Log to check if orders are populated
-  
-    
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    res.status(200).json({ success: true, user });
+    // 2. Verify data consistency
+    const directOrdersCount = await Order.countDocuments({ user: req.user._id });
+    console.log(`Data check: User has ${user.orders?.length || 0} populated orders, ${directOrdersCount} in database`);
+
+    // 3. Repair if needed (only updates references, not the populated data)
+    if (user.orders?.length !== directOrdersCount) {
+      console.log(`Repairing ${directOrdersCount - (user.orders?.length || 0)} missing order references`);
+      const directOrders = await Order.find({ user: req.user._id }).select('_id');
+      user.orders = directOrders.map(o => o._id);
+      await user.save();
+      
+      // Re-populate after repair
+      user.populate({
+        path: 'orders',
+        select: 'deliveryInfo items total createdAt status paymentMethod',
+        options: { sort: { createdAt: -1 } }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      user: {
+        ...user.toObject(),
+        orders: user.orders || [] // Ensure array exists
+      }
+    });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    console.error('User fetch error:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?._id
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load user data'
+    });
   }
 };
-
 const updateUserProfile = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

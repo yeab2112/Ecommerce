@@ -18,6 +18,7 @@ function ShopContextProvider({ children }) {
   const [cart, setCart] = useState([]);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [user, setUser] = useState(null);
+  const [orders, setOrders] = useState([]);
 
   // Fetch all products
   const getProducts = useCallback(async () => {
@@ -40,26 +41,45 @@ function ShopContextProvider({ children }) {
 
   // Fetch user data
   const fetchUserData = useCallback(async () => {
-    if (!token) {
-      setUser(null);
-      return;
-    }
-
     try {
-      const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/user/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Full API response:', response.data); 
-
+      console.log('Fetching user data...');
+      const response = await axios.get(
+        'https://ecommerce-rho-hazel.vercel.app/api/user/me',
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+  
+      console.log('Full API response:', response.data);
+      
       if (response.data.success) {
-        setUser(response.data.user);
-      } else {
-        throw new Error(response.data.message || 'Failed to fetch user data');
+        const userData = response.data.user;
+        setUser(userData)
+        
+        // Debug: Check what's actually being returned
+        console.log('User data structure:', {
+          id: userData._id,
+          orderCount: userData.orders?.length || 0,
+          hasDeliveryInfo: userData.orders?.[0]?.deliveryInfo ? true : false
+        });
+  
+        // Normalize data structure
+        return {
+          _id: userData._id,
+          name: userData.name,
+          email: userData.email,
+          image: userData.image,
+          createdAt: userData.createdAt,
+          orders: userData.orders || [], // Ensure array
+          cartdata: userData.cartdata || {}
+        };
       }
+      throw new Error(response.data.message || 'Failed to fetch user data');
     } catch (error) {
-      console.error('User fetch error:', error);
-      toast.error(error.response?.data?.message || 'Failed to load user data');
-      setUser(null);
+      console.error('Error in fetchUserData:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      throw error;
     }
   }, [token]);
 
@@ -295,7 +315,9 @@ function ShopContextProvider({ children }) {
     error,
     user,
     setUser,
-    fetchUserData
+    fetchUserData,
+    orders,
+    setOrders
   };
 
   return <ShopContext.Provider value={contextValue}>{children}</ShopContext.Provider>;

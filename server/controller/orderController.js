@@ -1,17 +1,38 @@
 import  Order  from "../moduls/order.js";
 import  UserModel  from "../moduls/user.js";
 // Create a new order
- const createOrder = async (req, res) => {
+const createOrder = async (req, res) => {
   try {
     const { deliveryInfo, paymentMethod, items, subtotal, deliveryFee, total } = req.body;
-    const userId = req.user._id;
+    const userId = req.user._id;  // Ensure req.user is populated by auth middleware
 
-    // Validate required fields
+    // Enhanced validation
     if (!deliveryInfo || !paymentMethod || !items || items.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Missing required order information'
       });
+    }
+
+    // Validate each item in the items array
+    for (const item of items) {
+      if (!item.product || !item.name || !item.size || !item.quantity || !item.price) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid item data in order'
+        });
+      }
+    }
+
+    // Validate deliveryInfo structure
+    const requiredDeliveryFields = ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'zipCode', 'country', 'phone'];
+    for (const field of requiredDeliveryFields) {
+      if (!deliveryInfo[field]) {
+        return res.status(400).json({
+          success: false,
+          message: `Missing required delivery field: ${field}`
+        });
+      }
     }
 
     // Create new order
@@ -27,15 +48,31 @@ import  UserModel  from "../moduls/user.js";
     });
 
     // Save order to database
-    await order.save();
+    const savedOrder = await order.save();
+    console.log('Order saved successfully:', savedOrder);
 
-    // Clear user's cart after successful order
-    await UserModel.findByIdAndUpdate(userId, { cartdata: {} });
+    // Update user with saved order id and clear cart
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      userId,
+      { 
+        $push: { orders: savedOrder._id },
+        $set: { cartdata: {} }
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      console.error('User not found during order creation');
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
 
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
-      order
+      order: savedOrder
     });
 
   } catch (error) {
@@ -43,10 +80,11 @@ import  UserModel  from "../moduls/user.js";
     res.status(500).json({
       success: false,
       message: 'Failed to create order',
-      error: error.message
+      error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : error.message  // Hide details in production
     });
   }
 };
+
 // Get all orders with items for current user
 const getUserOrders = async (req, res) => {
   try {
