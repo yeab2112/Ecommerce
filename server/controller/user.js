@@ -171,11 +171,11 @@ const getCurrentUser = async (req, res) => {
 //update user profile
 const updateUserProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { name, deliveryInfo } = req.body;
 
     // 1. Update user name
-    const user = await User.findByIdAndUpdate(
+    const user = await UserModel.findByIdAndUpdate(
       userId,
       { name },
       { new: true, runValidators: true }
