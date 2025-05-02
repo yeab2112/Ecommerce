@@ -110,7 +110,7 @@ const [formData, setFormData] = useState({
                 <label className="block text-gray-700 mb-1">Address</label>
                 <input
                   type="text"
-                  name="street"
+                  name="address"
                   value={formData.deliveryInfo.address}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border rounded-lg"
