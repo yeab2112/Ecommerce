@@ -2,29 +2,33 @@ import mongoose from 'mongoose';
 import './order.js'; 
 
 const UserSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
+    name: { 
+      type: String, 
+      required: true 
     },
-    email: {
-        type: String,
-        unique: true,
-        required: true
+    email: { 
+      type: String, 
+      unique: true, 
+      required: true 
     },
-    password: {
-        type: String,
-        required: true
+    password: { 
+      type: String, 
+      required: true 
     },
-    orders: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Order'  // Must match mongoose.model('Order', ...)
+    orders: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Order' 
     }],
-    cartdata: {
-        type: Object,
-        default: {}
+    cartdata: { 
+      type: Object, 
+      default: {} 
+    },
+    createdAt: { 
+      type: Date,
+      default: () => Date.now(), // Dynamic timestamp
+      immutable: true // Prevents accidental updates
     }
-}, { minimize: false });
-
-// ✅ Compile the schema into a model
-const UserModel = mongoose.model('User', UserSchema);
-export default UserModel;
+  }, { minimize: false });
+  
+  const UserModel = mongoose.model('User', UserSchema);
+  export default UserModel;

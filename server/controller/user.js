@@ -168,82 +168,38 @@ const getCurrentUser = async (req, res) => {
     });
   }
 };
+//update user profile
 const updateUserProfile = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
   try {
-    const { name, phone, address } = req.body;
-    const updateFields = {};
+    const userId = req.user.id;
+    const { name, deliveryInfo } = req.body;
 
-    // Validate and set update fields
-    if (name) updateFields.name = name;
-    if (phone) updateFields.phone = phone;
-    if (address) {
-      updateFields.address = {
-        street: address.street || '',
-        city: address.city || '',
-        state: address.state || '',
-        zipCode: address.zipCode || '',
-        country: address.country || ''
-      };
-    }
-
-    // Use UserModel instead of User for consistency
-    const updatedUser = await UserModel.findByIdAndUpdate(
-      req.user._id,
-      { $set: updateFields },
-      { 
-        new: true, 
-        runValidators: true,
-        select: '-password -__v -orders' // Exclude sensitive/unnecessary fields
-      }
+    // 1. Update user name
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { name },
+      { new: true, runValidators: true }
     );
 
-    if (!updatedUser) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    // 2. Find latest order for this user
+    const latestOrder = await Order.findOne({ user: userId }).sort({ createdAt: -1 });
+
+    if (latestOrder) {
+      latestOrder.deliveryInfo = deliveryInfo;
+      await latestOrder.save();
     }
 
-    // Optionally populate orders if needed
-    const userWithOrders = await UserModel.populate(updatedUser, {
-      path: 'orders',
-      select: 'status total createdAt',
-      options: { limit: 5, sort: { createdAt: -1 } }
-    });
-
-    res.status(200).json({ 
-      success: true, 
-      message: 'Profile updated successfully',
-      user: userWithOrders 
+    res.status(200).json({
+      success: true,
+      message: 'Profile and delivery info updated successfully',
+      user,
     });
   } catch (error) {
     console.error('Profile update error:', error);
-    
-    // Handle specific errors
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Validation failed',
-        errors: Object.values(error.errors).map(err => err.message) 
-      });
-    }
-    
-    if (error.code === 11000) { // Duplicate key error
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email already exists' 
-      });
-    }
-
-    res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
 // Forgot Password
 const Forgetpassword = async (req, res) => {
   try {
