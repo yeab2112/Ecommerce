@@ -1,48 +1,43 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // for navigation
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { ShopContext } from '../context/ShopContext'; // import ShopContext
+import { ShopContext } from '../context/ShopContext';
 
 const AuthPage = () => {
-  const [isLogin, setIsLogin] = useState(true);  // To toggle between login/signup
+  const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
-    name: '',  // Default empty for both login and signup
+    name: '',
     email: '',
     password: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { token, setToken } = useContext(ShopContext);  // Get the token and setToken function from context
-  const navigate = useNavigate();  // for redirecting after successful login/signup
+  const { token, setToken } = useContext(ShopContext);
+  const navigate = useNavigate();
 
-  // If token exists, redirect to the home page immediately
   useEffect(() => {
     if (token) {
-      navigate('/');  // Redirect to home if token is available
+      navigate('/');
     }
   }, [token, navigate]);
 
-  // Update formData state whenever `isLogin` changes
   useEffect(() => {
     setFormData({
-      name: isLogin ? '' : '',  // Name field is only required for signup
+      name: '',
       email: '',
       password: '',
     });
   }, [isLogin]);
 
-  // Toggle between login and signup forms
   const toggleForm = () => setIsLogin(!isLogin);
 
-  // Handle input field changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle login/signup form submission
   const handleAuthSubmit = async (e, type) => {
     e.preventDefault();
     setError('');
@@ -52,13 +47,11 @@ const AuthPage = () => {
       const endpoint = type === 'login' ? '/api/user/login' : '/api/user/signup';
       const response = await axios.post(`https://ecommerce-rho-hazel.vercel.app${endpoint}`, formData);
 
-      // On success, set the token in context and navigate to home
-      setToken(response.data.token); // Store the token in the global context
-      localStorage.setItem('token', response.data.token);  // Save token in localStorage
+      setToken(response.data.token);
+      localStorage.setItem('token', response.data.token);
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} successful!`);
-      navigate('/');  // Redirect to the home page after success
+      navigate('/');
     } catch (err) {
-      // Handle error gracefully
       const errorMessage = err.response?.data?.message || 'An error occurred. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -135,9 +128,19 @@ const AuthPage = () => {
               </span>
             )}
           </button>
+          {isLogin && (
+            <div className="text-right">
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-blue-500 hover:underline"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+          )}
         </div>
       </div>
-      <ToastContainer />  {/* Toast notifications */}
+      <ToastContainer />
     </div>
   );
 };

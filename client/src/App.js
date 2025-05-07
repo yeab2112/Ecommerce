@@ -16,7 +16,8 @@ import Order from './page/Order.js';
 import SearchBar from './component/searchBar.js';
 import Profile from "./page/Profile.js";
 import EditProfile from "./page/EditProfile.js";
-
+import ForgotPasswordPage from './page/ForgotPasswordPage .js.js';
+import ResetPasswordPage from './page/ResetPasswordPage.js'
 export const AuthContext = createContext(null);
 
 function App() {
@@ -40,6 +41,8 @@ function App() {
         <Route path='/signup' element={<AuthPage />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       </Routes>
       <Footer />
     </div>

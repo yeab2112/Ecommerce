@@ -2,10 +2,14 @@ import  UserModel  from "../moduls/user.js";
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import nodemailer from 'nodemailer';
+import sendEmail from "../utils/sendEmail.js";
+import crypto from "crypto"
 import validator from 'validator';  // Import the validator package
 import Order from "../moduls/order.js";
 dotenv.config({ path: './config/.env' });
+
+dotenv.config({ path: './config/.env' });
+
 
 const UserRegister = async (req, res) => {
 try {
@@ -201,7 +205,8 @@ const updateUserProfile = async (req, res) => {
 };
 
 // Forgot Password
-const Forgetpassword = async (req, res) => {
+
+const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -212,17 +217,16 @@ const Forgetpassword = async (req, res) => {
 
     const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1d' });
     user.resetToken = token;
-    user.resetTokenExpiration = Date.now() + 3600000; // 1 hour
+    user.resetTokenExpiration = Date.now() + 3600000; 
     await user.save();
 
     const resetLink = `http://localhost:3000/reset-password/${token}`;
     
-    // Setup email transporter using environment variables for security
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER, // Move your email user to .env
-        pass: process.env.EMAIL_PASS,  // Move your email password to .env
+        user: "yeabsiraaychiluhim2112@gmail.com", 
+        pass: "ya23547840",  
       },
     });
 
@@ -236,7 +240,7 @@ const Forgetpassword = async (req, res) => {
       `,
     });
     
-    res.send('Reset link sent to your email');
+    res.status(200).json('Reset link sent to your email');
       
   } catch (error) {
     console.error('Error saving User:', error);
@@ -269,4 +273,4 @@ const Reset = async (req, res) => {
   res.send('Password has been reset');
 };
 
-export { UserLogin, UserRegister, AdminLogin, getCurrentUser,updateUserProfile, Forgetpassword, Reset };
+export { UserLogin, UserRegister, AdminLogin, getCurrentUser,updateUserProfile, forgotPassword, Reset };

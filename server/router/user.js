@@ -1,6 +1,6 @@
 import express from "express"
 import authenticateUser from"../middleware/user.js"
-import { Forgetpassword, Reset } from "../controller/user.js"
+import { forgotPassword, Reset } from "../controller/user.js"
 import { UserLogin,UserRegister,AdminLogin , getCurrentUser,updateUserProfile} from "../controller/user.js"
 const userRouter=express.Router()
 
@@ -45,8 +45,8 @@ userRouter.put('/update', authenticateUser, updateUserProfile);
 
 
 
-userRouter.post('/forget-password',Forgetpassword)
-userRouter.post('/reset-password/:token',Reset)
+userRouter.post('/forget-password',forgotPassword)
+userRouter.post('/reset-password/:token', Reset);
 
  
 
