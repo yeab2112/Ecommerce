@@ -2,20 +2,15 @@ import  UserModel  from "../moduls/user.js";
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import sendEmail from "../utils/sendEmail.js";
-import crypto from "crypto"
-import validator from 'validator';  // Import the validator package
+import validator from 'validator';  
 import Order from "../moduls/order.js";
 dotenv.config({ path: './config/.env' });
-
-dotenv.config({ path: './config/.env' });
-
+import nodemailer from "nodemailer"
 
 const UserRegister = async (req, res) => {
 try {
     const { name, email, password } = req.body;
 
-    // Check if all required fields are provided
     if (!name || !email || !password ) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
