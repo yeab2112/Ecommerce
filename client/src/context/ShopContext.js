@@ -126,7 +126,7 @@ function ShopContextProvider({ children }) {
 
   const cartCount = useMemo(() => {
     return cart.reduce((sum, item) => {
-      const quantity = Number(item?.quantity) || 0;erth
+      const quantity = Number(item?.quantity) || 0;
       return sum + quantity;
     }, 0);
   }, [cart]);

@@ -10,7 +10,7 @@ function Add() {
     category: '',
     price: '',
     sizes: [],
-    colors: [], // Added colors array
+    colors: [], 
     bestSeller: false,
     images: [],
   });
@@ -131,7 +131,7 @@ function Add() {
       formData.append('price', product.price);
       formData.append('bestSeller', product.bestSeller);
       formData.append('sizes', JSON.stringify(product.sizes));
-      formData.append('colors', JSON.stringify(product.colors)); // Added colors
+      formData.append('colors', JSON.stringify(product.colors)); 
 
       if (product.images[0]) formData.append('images1', product.images[0]);
       if (product.images[1]) formData.append('images2', product.images[1]);
@@ -157,7 +157,7 @@ function Add() {
         category: '',
         price: '',
         sizes: [],
-        colors: [], // Reset colors
+        colors: [], 
         bestSeller: false,
         images: [],
       });

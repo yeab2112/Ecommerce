@@ -145,29 +145,56 @@ const productDetail = async (req, res) => {
     // Normalize sizes to always be an array of strings
     const normalizeSizes = (sizes) => {
       if (!sizes) return [];
-      
-      // Case 1: Array containing a JSON string (["[\"S\",\"M\",\"L\"]"])
-      if (Array.isArray(sizes) && sizes.length === 1 && 
-          typeof sizes[0] === 'string' && sizes[0].startsWith('[')) {
+
+      if (
+        Array.isArray(sizes) &&
+        sizes.length === 1 &&
+        typeof sizes[0] === 'string' &&
+        sizes[0].startsWith('[')
+      ) {
         try {
           return JSON.parse(sizes[0]);
         } catch {
           return sizes[0].replace(/[\[\]"]/g, '').split(',').map(s => s.trim());
         }
       }
-      
-      // Case 2: Already proper array (["S","M","L"]) or string ("S,M,L")
+
       if (Array.isArray(sizes)) return sizes;
       if (typeof sizes === 'string') return sizes.split(',').map(s => s.trim());
-      
+
       return [];
     };
 
-    const sizes = normalizeSizes(product.sizes);
+    // Normalize color to always be an array of strings
+    const normalizeColors = (colors) => {
+      if (!colors) return [];
+
+      if (
+        Array.isArray(colors) &&
+        colors.length === 1 &&
+        typeof colors[0] === 'string' &&
+        colors[0].startsWith('[')
+      ) {
+        try {
+          return JSON.parse(colors[0]);
+        } catch {
+          return colors[0].replace(/[\[\]"]/g, '').split(',').map(c => c.trim());
+        }
+      }
+
+      if (Array.isArray(colors)) return colors;
+      if (typeof colors === 'string') return colors.split(',').map(c => c.trim());
+
+      return [];
+    };
+
+    const sizes = normalizeSizes(product.sizes || product.size);
+    const colors = normalizeColors(product.colors || product.color);
 
     res.status(200).json({
       ...product.toObject(),
-      sizes, // Now always a clean array
+      sizes,
+      colors,
     });
   } catch (error) {
     console.error('Error fetching product:', error);

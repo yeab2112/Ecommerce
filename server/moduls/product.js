@@ -6,15 +6,19 @@ const productSchema = new mongoose.Schema(
     name: { type: String, required: true },
     category: { type: String, required: true },
     price: { type: Number, required: true },
-    images: [{ type: String, required: true }], // Array of image URLs
+    images: [{ type: String, required: true }],
+    colors: {
+      type: [String], // Example: ['Red', 'Blue', 'Green']
+      default: [],
+    }, 
     sizes: [{ type: String, required: true }], // Array of sizes
-    bestSeller: { type: Boolean, default: false }, // Consistent naming
-    description: { type: String, required: true }, // Fixed typo
+    rating: { type: Number, default: 0 },
+    bestSeller: { type: Boolean, default: false },
+    description: { type: String, required: true },
   },
-  { timestamps: true } // Automatically adds `createdAt` and `updatedAt` fields
+  { timestamps: true } // Adds createdAt and updatedAt
 );
 
-// Create and export Product model
 const Product = mongoose.model('Product', productSchema);
 
 export { Product };
