@@ -59,7 +59,6 @@ const Product = () => {
 
     fetchProduct();
   }, [productId]);  
-
   const handleAddToCart = () => {
     if (!selectedSize) {
       setError('Please select a size.');  
@@ -73,10 +72,9 @@ const Product = () => {
     addToCart({
       productId: product._id,
       size: selectedSize,
-      color: selectedColor,
+      color: selectedColor, // This should be a string (color name)
     });
   };
-
   const renderStars = (rating) => {
     const fullStars = Math.floor(rating);  
     const halfStar = rating - fullStars >= 0.5;  

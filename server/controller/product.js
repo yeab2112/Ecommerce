@@ -14,17 +14,17 @@ cloudinary.config({
 const AddProducts = async (req, res) => {
   try {
     console.log('Received files:', req.files);
-    console.log('req.body:', req.body);
+    console.log('Request body:', req.body);
 
     const { name, price, description, category, bestSeller, sizes, colors } = req.body;
 
-    // ERROR 1: Not properly handling potential undefined files
-    const image1 = req.files?.images1?.[0];
-    const image2 = req.files?.images2?.[0];
-    const image3 = req.files?.images3?.[0];
-    const image4 = req.files?.images4?.[0];
-
-    const images = [image1, image2, image3, image4].filter(Boolean);
+    // Handle file uploads
+    const images = [
+      req.files?.images1?.[0],
+      req.files?.images2?.[0],
+      req.files?.images3?.[0],
+      req.files?.images4?.[0]
+    ].filter(Boolean);
 
     if (images.length === 0) {
       return res.status(400).json({ 
@@ -33,45 +33,36 @@ const AddProducts = async (req, res) => {
       });
     }
 
+    // Upload images to Cloudinary
     const imageUrls = await Promise.all(
-      images.map(async(item) => {
-        let result = await cloudinary.uploader.upload(item.path, {resource_type:"image"})
-        return result.secure_url
+      images.map(async (file) => {
+        const result = await cloudinary.uploader.upload(file.path, {
+          resource_type: "image"
+        });
+        return result.secure_url;
       })
-    )
+    );
 
-    // ERROR 2: Parsing 'sizes' instead of 'colors' for colors variable
-    let parsedColors;
-    try {
-      parsedColors = JSON.parse(sizes); // WRONG: Should be parsing 'colors' not 'sizes'
-      if (!Array.isArray(parsedColors)) {
-        parsedColors = ['']; // Default value makes no sense for colors
+    // Parse sizes and colors safely
+    const parseArray = (str, defaultValue) => {
+      try {
+        const parsed = JSON.parse(str);
+        return Array.isArray(parsed) ? parsed : defaultValue;
+      } catch (e) {
+        return defaultValue;
       }
-    } catch (e) {
-      parsedColors = ['red']; // Arbitrary default color
-    }
+    };
 
-    // ERROR 3: Duplicate parsing of sizes (not wrong but redundant)
-    let parsedSizes;
-    try {
-      parsedSizes = JSON.parse(sizes);
-      if (!Array.isArray(parsedSizes)) {
-        parsedSizes = ['M'];
-      }
-    } catch (e) {
-      parsedSizes = ['M'];
-    }
-
-    // ERROR 4: Incorrect Date.now() usage with colors parameter
     const newProduct = new Product({
       name,
       price: Number(price),
       images: imageUrls,
-      bestSeller: bestSeller === 'true' ? true : false,
-      sizes: parsedSizes,
+      bestSeller: bestSeller === 'true',
+      sizes: parseArray(sizes, ['M']),
+      colors: parseArray(colors, ['Black']), // Properly parse colors
       description,
-      category,
-      date: Date.now(colors) // WRONG: Date.now() doesn't take parameters
+      category
+      // timestamps will be added automatically by schema
     });
 
     await newProduct.save();
@@ -79,7 +70,7 @@ const AddProducts = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Product added successfully",
-      product: newProduct,
+      product: newProduct
     });
 
   } catch (error) {
