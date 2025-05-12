@@ -11,93 +11,111 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const AddProducts = async (req, res) => {
+import Product from '../models/Product.js';
+import cloudinary from 'cloudinary';
+
+const addProduct = async (req, res) => {
   try {
-    console.log('Received files:', req.files);
-    console.log('Request body:', req.body);
+    // 1. Validate required fields
+    const requiredFields = ['name', 'price', 'description', 'category'];
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
+        return res.status(400).json({
+          success: false,
+          message: `${field} is required`
+        });
+      }
+    }
 
-    const { 
-      name, 
-      price, 
-      description, 
-      category, 
-      bestSeller, 
-      sizes,
-      colors // Added colors to destructuring
-    } = req.body;
-
-    // Safer file access
-    const image1 = req.files?.images1?.[0];
-    const image2 = req.files?.images2?.[0];
-    const image3 = req.files?.images3?.[0];
-    const image4 = req.files?.images4?.[0];
-
-    const images = [image1, image2, image3, image4].filter(Boolean);
+    // 2. Handle image uploads
+    const images = [
+      req.files?.images1?.[0],
+      req.files?.images2?.[0],
+      req.files?.images3?.[0],
+      req.files?.images4?.[0]
+    ].filter(Boolean);
 
     if (images.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'At least one image is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'At least one image is required'
       });
     }
 
-    const imageUrls = await Promise.all(
-      images.map(async (item) => {
-        const result = await cloudinary.uploader.upload(item.path, { resource_type: "image" });
-        return result.secure_url;
+    // 3. Upload images to Cloudinary
+    const imageUploads = images.map(file => 
+      cloudinary.uploader.upload(file.path, {
+        folder: 'ecommerce/products',
+        width: 800,
+        height: 800,
+        crop: 'fill'
       })
     );
 
-    // Parse sizes and colors (frontend sends as JSON strings)
-    let parsedSizes;
-    let parsedColors;
-    
+    const imageResults = await Promise.all(imageUploads);
+    const imageUrls = imageResults.map(result => result.secure_url);
+
+    // 4. Parse and validate colors
+    let colors = [];
     try {
-      parsedSizes = JSON.parse(sizes);
-      if (!Array.isArray(parsedSizes)) {
-        parsedSizes = ['M']; // Default size
+      const parsedColors = JSON.parse(req.body.colors || '[]');
+      if (Array.isArray(parsedColors)) {
+        colors = parsedColors.map(color => ({
+          name: color?.name?.trim() || 'Unnamed',
+          code: color?.code?.match(/^#([0-9a-f]{3}){1,2}$/i) 
+            ? color.code 
+            : '#000000'
+        }));
       }
-    } catch (e) {
-      parsedSizes = ['M'];
+    } catch (error) {
+      console.error('Color parsing error:', error);
     }
 
+    // 5. Parse and validate sizes
+    let sizes = ['M']; // Default size
     try {
-      parsedColors = JSON.parse(colors);
-      if (!Array.isArray(parsedColors)) {
-        parsedColors = []; // Default empty array if parsing fails
+      const parsedSizes = JSON.parse(req.body.sizes || '[]');
+      if (Array.isArray(parsedSizes) && parsedSizes.length > 0) {
+        sizes = parsedSizes.filter(size => 
+          ['XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(size)
+        );
       }
-    } catch (e) {
-      parsedColors = [];
+    } catch (error) {
+      console.error('Size parsing error:', error);
     }
 
-    const newProduct = new Product({
-      name,
-      price: Number(price),
+    // 6. Create product
+    const product = new Product({
+      name: req.body.name,
+      price: parseFloat(req.body.price),
+      description: req.body.description,
+      category: req.body.category,
+      bestSeller: req.body.bestSeller === 'true',
       images: imageUrls,
-      bestSeller: bestSeller === 'true',
-      sizes: parsedSizes,
-      colors: parsedColors, // Added colors to product creation
-      description,
-      category,
-      date: Date.now()
+      colors,
+      sizes
     });
 
-    await newProduct.save();
+    await product.save();
 
-    return res.status(201).json({
+    // 7. Return success response
+    res.status(201).json({
       success: true,
-      message: "Product added successfully",
-      product: newProduct,
+      message: 'Product created successfully',
+      product
     });
 
   } catch (error) {
-    console.error('Error adding product:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Error adding product' 
+    console.error('Error creating product:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error creating product',
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
   }
 };
+
+export { addProduct };
 // List all products
 const ListProducts = async (req, res) => {
   try {
