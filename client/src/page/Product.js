@@ -5,13 +5,26 @@ import RelatedProduct from '../component/Relatedproduct';
 import React, { useContext, useState, useEffect } from 'react';  
 import { ShopContext } from '../context/ShopContext';  
 
+// Color reference for visual display
+const COLOR_REFERENCE = {
+  'Black': '#000000',
+  'White': '#FFFFFF',
+  'Red': '#FF0000',
+  'Blue': '#0000FF',
+  'Green': '#008000',
+  'Yellow': '#FFFF00',
+  'Pink': '#FFC0CB',
+  'Gray': '#808080',
+  // Add more colors as needed
+};
+
 const Product = () => {
   const { productId } = useParams(); 
   const [product, setProduct] = useState(null); 
   const { products, addToCart } = useContext(ShopContext);  
   const [currentImage, setCurrentImage] = useState(null); 
   const [selectedSize, setSelectedSize] = useState(''); 
-  const [selectedColor, setSelectedColor] = useState(''); // New state for the selected color
+  const [selectedColor, setSelectedColor] = useState(''); 
   const [error, setError] = useState(''); 
   const [loading, setLoading] = useState(true);  
 
@@ -19,16 +32,22 @@ const Product = () => {
     const fetchProduct = async () => {
       try {
         setLoading(true); 
-        const response = await axios.get(`https://ecommerce-rho-hazel.vercel.app/api/product/detail_products/${productId}`);
+        const response = await axios.get(
+          `https://ecommerce-rho-hazel.vercel.app/api/product/detail_products/${productId}`
+        );
         
         if (response.data) {
           setProduct({
             ...response.data,
             sizes: response.data.sizes || [], 
-            colors: response.data.colors || [], // Fallback to an empty array if no colors are provided
+            colors: response.data.colors || ['Black'], // Default to Black if no colors
             rating: response.data.rating || 4.2,  
           });
           setCurrentImage(response.data.images?.[0] || assets.placeholder); 
+          // Auto-select first color if available
+          if (response.data.colors?.length > 0) {
+            setSelectedColor(response.data.colors[0]);
+          }
         }
       } catch (error) {
         console.error('Error fetching product details:', error); 
@@ -47,11 +66,15 @@ const Product = () => {
       return;
     }
     if (!selectedColor) {
-      setError('Please select a color.'); // Show error if no color is selected
+      setError('Please select a color.');
       return;
     }
     setError('');  
-    addToCart(product._id, selectedSize, selectedColor);  // Add selected color to the cart
+    addToCart({
+      productId: product._id,
+      size: selectedSize,
+      color: selectedColor,
+    });
   };
 
   const renderStars = (rating) => {
@@ -77,104 +100,175 @@ const Product = () => {
   if (!product) return <div className="text-center py-8">{error || 'Product not found'}</div>;  
 
   return (
-    <div className="product-detail-container p-6 flex flex-col gap-8 w-full mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-3 w-full justify-center gap-8">
+    <div className="product-detail-container p-6 flex flex-col gap-8 w-full max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
         
-        {/* Thumbnails Column */}
-        <div className="thumbnails flex flex-col gap-3 w-1/3">
-          {product.images?.map((img, index) => (
+        {/* Image Gallery Column */}
+        <div className="flex flex-col gap-4 order-1">
+          {/* Main Image */}
+          <div className="main-image bg-white p-4 rounded-lg shadow-md">
             <img
-              key={index}
-              src={img}
-              alt={`Product thumbnail ${index + 1}`}
-              onClick={() => setCurrentImage(img)} 
-              className={`w-20 h-20 cursor-pointer rounded-md shadow-md ${
-                currentImage === img ? 'border-2 border-blue-500' : ''
-              }`}  
+              src={currentImage}  
+              alt={product.name}
+              className="w-full h-auto max-h-[500px] object-contain mx-auto"
             />
-          ))}
-        </div>
-
-        {/* Main Image Column */}
-        <div className="main-image flex justify-center w-2/3">
-          <img
-            src={currentImage}  
-            alt={product.name}
-            className="max-w-md w-full h-auto max-h-[500px] object-contain rounded-lg shadow-md"
-          />
+          </div>
+          
+          {/* Thumbnails */}
+          <div className="thumbnails flex flex-wrap gap-3 justify-center">
+            {product.images?.map((img, index) => (
+              <img
+                key={index}
+                src={img}
+                alt={`Product thumbnail ${index + 1}`}
+                onClick={() => setCurrentImage(img)} 
+                className={`w-16 h-16 cursor-pointer object-cover rounded-md ${
+                  currentImage === img ? 'ring-2 ring-blue-500' : 'opacity-80 hover:opacity-100'
+                } transition-all`}  
+              />
+            ))}
+          </div>
         </div>
 
         {/* Product Details Column */}
-        <div className="details-section flex flex-col gap-4 w-2/3">
-          <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
+        <div className="details-section flex flex-col gap-4 order-2 lg:order-3 xl:order-2">
+          <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
           
-          {/* Dynamic Rating */}
-          <div className="rating mb-4">
-            {renderStars(product.rating)}  
+          <div className="flex items-center gap-2">
+            {renderStars(product.rating)}
+            <span className="text-sm text-gray-500">|</span>
+            <span className="text-sm text-gray-600">SKU: {product._id.slice(-6)}</span>
           </div>
           
-          <p className="text-xl font-semibold text-gray-800">{`$${product.price}`}</p>
+          <p className="text-2xl font-semibold text-gray-800 my-2">
+            ${product.price.toFixed(2)}
+          </p>
           
           <p className="text-gray-600 mb-4">{product.description}</p>
           
           {/* Size Selection */}
           <div className="size-selection mb-4">
-            <label htmlFor="size" className="text-lg font-semibold block mb-2">
-              Select Size:
-            </label>
-            <select
-              id="size"
-              value={selectedSize}
-              onChange={(e) => setSelectedSize(e.target.value)}  
-              className="p-2 border rounded-md w-full max-w-xs"
-            >
-              <option value="">Choose a size</option>
+            <h3 className="text-lg font-semibold mb-2">Size:</h3>
+            <div className="flex flex-wrap gap-2">
               {product.sizes?.map((size) => (
-                <option key={size} value={size}>
+                <button
+                  key={size}
+                  onClick={() => setSelectedSize(size)}
+                  className={`px-4 py-2 border rounded-md ${
+                    selectedSize === size
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-800 border-gray-300 hover:border-blue-500'
+                  } transition-colors`}
+                >
                   {size}
-                </option>
+                </button>
               ))}
-            </select>
-            {error && <p className="text-red-600 text-sm mt-2">{error}</p>}  
+            </div>
+            {error && !selectedSize && (
+              <p className="text-red-600 text-sm mt-1">{error}</p>
+            )}
           </div>
 
           {/* Color Selection */}
-          <div className="color-selection mb-4">
-            <label htmlFor="color" className="text-lg font-semibold block mb-2">
-              Select Color:
-            </label>
-            <select
-              id="color"
-              value={selectedColor}
-              onChange={(e) => setSelectedColor(e.target.value)} 
-              className="p-2 border rounded-md w-full max-w-xs"
-            >
-              <option value="">Choose a color</option>
-              {product.colors?.map((color, index) => (
-                <option key={index} value={color}>
-                  {color}
-                </option>
-              ))}
-            </select>
-            {error && <p className="text-red-600 text-sm mt-2">{error}</p>}  
+          <div className="color-selection mb-6">
+            <h3 className="text-lg font-semibold mb-2">Color:</h3>
+            <div className="flex flex-wrap gap-3">
+              {product.colors?.map((colorName) => {
+                const colorCode = COLOR_REFERENCE[colorName] || '#CCCCCC';
+                return (
+                  <div 
+                    key={colorName}
+                    onClick={() => setSelectedColor(colorName)}
+                    className={`cursor-pointer p-0.5 rounded-full ${
+                      selectedColor === colorName 
+                        ? 'ring-2 ring-blue-500' 
+                        : 'ring-1 ring-gray-200'
+                    }`}
+                  >
+                    <div 
+                      className="w-10 h-10 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: colorCode }}
+                      title={colorName}
+                    >
+                      {selectedColor === colorName && (
+                        <svg 
+                          className="w-5 h-5 text-white" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth="2" 
+                            d="M5 13l4 4L19 7" 
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    <span className="block text-xs text-center mt-1">{colorName}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {error && !selectedColor && (
+              <p className="text-red-600 text-sm mt-1">{error}</p>
+            )}
           </div>
           
           {/* Add to Cart Button */}
           <button
             onClick={handleAddToCart} 
-            className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 w-36"
+            className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-md 
+                      font-medium text-lg transition-colors w-full max-w-md"
           >
             Add to Cart
           </button>
         </div>
+
+        {/* Product Highlights/Details Column */}
+        <div className="product-info order-3 lg:order-2 xl:order-3 bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-xl font-semibold mb-4">Product Details</h3>
+          <ul className="space-y-3">
+            <li className="flex items-start">
+              <svg className="w-5 h-5 text-blue-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Category: {product.category}</span>
+            </li>
+            <li className="flex items-start">
+              <svg className="w-5 h-5 text-blue-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Available Colors: {product.colors?.join(', ')}</span>
+            </li>
+            <li className="flex items-start">
+              <svg className="w-5 h-5 text-blue-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Available Sizes: {product.sizes?.join(', ')}</span>
+            </li>
+            {product.bestSeller && (
+              <li className="flex items-start">
+                <svg className="w-5 h-5 text-blue-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="font-medium text-blue-600">Bestseller Product</span>
+              </li>
+            )}
+          </ul>
+        </div>
       </div>
 
-      {/* Related Products */}
-      <RelatedProduct 
-        category={product.category} 
-        currentProductId={product._id} 
-        products={products} 
-      />
+      {/* Related Products Section */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
+        <RelatedProduct 
+          category={product.category} 
+          currentProductId={product._id} 
+          products={products} 
+        />
+      </div>
     </div>
   );
 };

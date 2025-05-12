@@ -141,48 +141,76 @@ function ShopContextProvider({ children }) {
   }, [getProducts, fetchCart, fetchUserData, token]);
 
   // Add to cart function
-  const addToCart = async (productId, size) => {
+  const addToCart = async (productId, size, color) => {
     if (!token) {
       toast.error('Please login to add items to cart');
       navigate('/login');
       return false;
     }
   
-    const normalizedSize = size.trim().toUpperCase();
-    const cartKey = `${productId}_${normalizedSize}`;
-  
-    // Check if item already exists
-    const existingItem = cart.find(item => item.cartKey === cartKey);
-    if (existingItem) {
-      toast.warning('This item is already in your cart');
+    // Validate inputs
+    if (!size || !color) {
+      toast.error('Please select both size and color');
       return false;
     }
   
+    const normalizedSize = size.trim().toUpperCase();
+    const normalizedColor = color.trim();
     const toastId = toast.loading('Adding to cart...');
   
     try {
       const response = await axios.post(
         'https://ecommerce-rho-hazel.vercel.app/api/cart/add',
-        { productId, size: normalizedSize },
-        { headers: { 'Authorization': `Bearer ${token}` } }
+        { 
+          productId, 
+          size: normalizedSize,
+          color: normalizedColor 
+        },
+        { 
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
   
-      if (response.data.message === 'Product added to cart successfully!') {
+      if (response.data.success) {
+        // Update local cart state
         const product = products.find(p => p._id === productId);
         if (product) {
-          setCart(prevCart => [
-            ...prevCart,
-            {
-              _id: productId,
-              product: productId,
-              cartKey,
-              size: normalizedSize,
-              quantity: 1,
-              price: product.price,
-              name: product.name,
-              image: product.images?.[0] || ''
+          setCart(prevCart => {
+            const existingIndex = prevCart.findIndex(
+              item => item.productId === productId && 
+                     item.size === normalizedSize && 
+                     item.color === normalizedColor
+            );
+  
+            if (existingIndex >= 0) {
+              // Item exists, update quantity
+              const updatedCart = [...prevCart];
+              updatedCart[existingIndex] = {
+                ...updatedCart[existingIndex],
+                quantity: updatedCart[existingIndex].quantity + 1
+              };
+              return updatedCart;
+            } else {
+              // New item
+              return [
+                ...prevCart,
+                {
+                  productId,
+                  product: product, // Store full product details
+                  size: normalizedSize,
+                  color: normalizedColor,
+                  quantity: 1,
+                  price: product.price,
+                  name: product.name,
+                  image: product.images?.[0] || '',
+                  addedAt: new Date()
+                }
+              ];
             }
-          ]);
+          });
         }
   
         toast.update(toastId, {
@@ -198,13 +226,11 @@ function ShopContextProvider({ children }) {
     } catch (error) {
       console.error('Add to cart error:', error);
       toast.update(toastId, {
-        render: error.message || 'Failed to add to cart',
+        render: error.response?.data?.message || error.message || 'Failed to add to cart',
         type: 'error',
         isLoading: false,
         autoClose: 3000
       });
-      
-      await fetchCart();
       return false;
     }
   };
