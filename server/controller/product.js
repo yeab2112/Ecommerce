@@ -18,7 +18,6 @@ const AddProducts = async (req, res) => {
 
     const { name, price, description, category, bestSeller, sizes, colors } = req.body;
 
-    // Handle file uploads
     const images = [
       req.files?.images1?.[0],
       req.files?.images2?.[0],
@@ -27,54 +26,46 @@ const AddProducts = async (req, res) => {
     ].filter(Boolean);
 
     if (images.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'At least one image is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'At least one image is required'
       });
     }
 
-    // Upload images to Cloudinary
     const imageUrls = await Promise.all(
       images.map(async (file) => {
         const result = await cloudinary.uploader.upload(file.path, {
-          resource_type: "image"
+          resource_type: 'image'
         });
         return result.secure_url;
       })
     );
 
-    // Parse sizes safely
     let parsedSizes;
     try {
       parsedSizes = JSON.parse(sizes);
       if (!Array.isArray(parsedSizes)) {
-        parsedSizes = ['M']; // Default size
+        parsedSizes = ['M'];
       }
     } catch (e) {
       parsedSizes = ['M'];
     }
 
-    // Parse and validate colors
     let parsedColors = [];
     try {
-      // First try to parse the colors JSON
       const receivedColors = typeof colors === 'string' ? JSON.parse(colors) : colors;
-      
-      // Define valid color options
       const validColors = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Gray'];
-      
-      // Filter to only include valid color strings
+
       if (Array.isArray(receivedColors)) {
-        parsedColors = receivedColors.filter(color => 
+        parsedColors = receivedColors.filter(color =>
           typeof color === 'string' && validColors.includes(color)
         );
       }
     } catch (e) {
       console.error('Error parsing colors:', e);
-      parsedColors = []; // Default to empty array if parsing fails
+      parsedColors = [];
     }
 
-    // Create new product with validated data
     const newProduct = new Product({
       name: name.trim(),
       price: Number(price),
@@ -86,12 +77,11 @@ const AddProducts = async (req, res) => {
       category: category.trim()
     });
 
-    // Save to database
     await newProduct.save();
 
     return res.status(201).json({
       success: true,
-      message: "Product added successfully",
+      message: 'Product added successfully',
       product: {
         _id: newProduct._id,
         name: newProduct.name,
@@ -105,13 +95,14 @@ const AddProducts = async (req, res) => {
 
   } catch (error) {
     console.error('Error adding product:', error);
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: error.message || 'Error adding product',
       error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
-};;
+};
+
 // List all products
 const ListProducts = async (req, res) => {
   try {

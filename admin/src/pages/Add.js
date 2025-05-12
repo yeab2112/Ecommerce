@@ -10,12 +10,11 @@ function Add() {
     category: '',
     price: '',
     sizes: [],
-    colors: [], 
+    colors: [],
     bestSeller: false,
     images: [],
   });
 
-  // Common colors for clothing
   const COLOR_OPTIONS = [
     { name: 'Black', code: '#000000' },
     { name: 'White', code: '#FFFFFF' },
@@ -55,42 +54,21 @@ function Add() {
     });
   };
 
-  // Added color selection handler
-  // Update the handleColorChange function to store only color names
-const handleColorChange = (e, color) => {
-  const { checked } = e.target;
-  let updatedColors = [...product.colors];
+  const handleColorChange = (e, color) => {
+    const { checked } = e.target;
+    let updatedColors = [...product.colors];
 
-  if (checked) {
-    updatedColors.push(color.name); // Store only the color name
-  } else {
-    updatedColors = updatedColors.filter(c => c !== color.name);
-  }
+    if (checked) {
+      updatedColors.push(color.name);
+    } else {
+      updatedColors = updatedColors.filter(c => c !== color.name);
+    }
 
-  setProduct({
-    ...product,
-    colors: updatedColors, // Now storing array of strings
-  });
-};
-
-// Update the color checkbox rendering:
-{COLOR_OPTIONS.map((color) => (
-  <label key={color.name} className="flex items-center space-x-2">
-    <input
-      type="checkbox"
-      checked={product.colors.includes(color.name)} // Check against color name
-      onChange={(e) => handleColorChange(e, color)}
-      className="h-4 w-4"
-    />
-    <div className="flex items-center">
-      <div 
-        className="w-5 h-5 rounded-full border border-gray-300 mr-1"
-        style={{ backgroundColor: color.code }}
-      ></div>
-      <span>{color.name}</span>
-    </div>
-  </label>
-))}
+    setProduct({
+      ...product,
+      colors: updatedColors,
+    });
+  };
 
   const handleImageUpload = async (e, index) => {
     const files = e.target.files;
@@ -151,7 +129,7 @@ const handleColorChange = (e, color) => {
       formData.append('price', product.price);
       formData.append('bestSeller', product.bestSeller);
       formData.append('sizes', JSON.stringify(product.sizes));
-      formData.append('colors', JSON.stringify(product.colors))
+      formData.append('colors', JSON.stringify(product.colors));
       if (product.images[0]) formData.append('images1', product.images[0]);
       if (product.images[1]) formData.append('images2', product.images[1]);
       if (product.images[2]) formData.append('images3', product.images[2]);
@@ -176,7 +154,7 @@ const handleColorChange = (e, color) => {
         category: '',
         price: '',
         sizes: [],
-        colors: [], 
+        colors: [],
         bestSeller: false,
         images: [],
       });
@@ -196,7 +174,6 @@ const handleColorChange = (e, color) => {
 
       {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
 
-      {/* Image Upload Fields */}
       <div className="mb-6 text-center">
         <label className="block text-sm font-medium text-gray-700 mb-2 md:mb-4">Upload Images (Max 4)</label>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-4 md:gap-4">
@@ -251,9 +228,7 @@ const handleColorChange = (e, color) => {
         )}
       </div>
 
-      {/* Product Form */}
       <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-        {/* Product Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Name</label>
           <input
@@ -266,7 +241,6 @@ const handleColorChange = (e, color) => {
           />
         </div>
 
-        {/* Product Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Description</label>
           <textarea
@@ -279,7 +253,6 @@ const handleColorChange = (e, color) => {
           />
         </div>
 
-        {/* Product Category */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Category</label>
           <select
@@ -296,7 +269,6 @@ const handleColorChange = (e, color) => {
           </select>
         </div>
 
-        {/* Product Price */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Price</label>
           <input
@@ -309,7 +281,6 @@ const handleColorChange = (e, color) => {
           />
         </div>
 
-        {/* Product Sizes */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Available Sizes</label>
           <div className="flex flex-wrap gap-3">
@@ -329,7 +300,6 @@ const handleColorChange = (e, color) => {
           </div>
         </div>
 
-        {/* Product Colors - Added this section */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Available Colors</label>
           <div className="flex flex-wrap gap-3">
@@ -338,12 +308,12 @@ const handleColorChange = (e, color) => {
                 <input
                   type="checkbox"
                   name="colors"
-                  checked={product.colors.some(c => c.name === color.name)}
+                  checked={product.colors.includes(color.name)}
                   onChange={(e) => handleColorChange(e, color)}
                   className="h-4 w-4"
                 />
                 <div className="flex items-center">
-                  <div 
+                  <div
                     className="w-5 h-5 rounded-full border border-gray-300 mr-1"
                     style={{ backgroundColor: color.code }}
                   ></div>
@@ -354,7 +324,6 @@ const handleColorChange = (e, color) => {
           </div>
         </div>
 
-        {/* Best Seller Checkbox */}
         <div className="flex items-center">
           <input
             type="checkbox"
@@ -366,7 +335,6 @@ const handleColorChange = (e, color) => {
           <label className="ml-2 text-sm font-medium text-gray-700">Mark as Best Seller</label>
         </div>
 
-        {/* Add Button */}
         <button
           type="submit"
           disabled={isSubmitting}
