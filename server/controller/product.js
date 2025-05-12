@@ -13,96 +13,79 @@ cloudinary.config({
 
 const AddProducts = async (req, res) => {
   try {
-    console.log('Received files:', req.files);
-    console.log('Request body:', req.body);
+    console.log('Received files:', req.files); // Debug log
+    
+    const { name, price, description, category, bestSeller, sizes , colors} = req.body;
+    console.log('req.files:', req.files);
+console.log('req.body:', req.body);
 
-    const { name, price, description, category, bestSeller, sizes, colors } = req.body;
+    // Safer file access
+    const image1 = req.files?.images1?.[0];
+    const image2 = req.files?.images2?.[0];
+    const image3 = req.files?.images3?.[0];
+    const image4 = req.files?.images4?.[0];
 
-    const images = [
-      req.files?.images1?.[0],
-      req.files?.images2?.[0],
-      req.files?.images3?.[0],
-      req.files?.images4?.[0]
-    ].filter(Boolean);
+    const images = [image1, image2, image3, image4].filter(Boolean);
 
     if (images.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one image is required'
+      return res.status(400).json({ 
+        success: false, 
+        message: 'At least one image is required' 
       });
     }
-
     const imageUrls = await Promise.all(
-      images.map(async (file) => {
-        const result = await cloudinary.uploader.upload(file.path, {
-          resource_type: 'image'
-        });
-        return result.secure_url;
+      images.map(async(item)=>{
+let result=await cloudinary.uploader.upload(item.path,{resource_type:"image"})
+return  result.secure_url
       })
-    );
-
+    )
+   
+    // Parse sizes (frontend sends as JSON string)
+    let parsedColors;
+    try {
+      parsedColors = JSON.parse(colors);
+      if (!Array.isArray(parsedColors)) {
+        parsedColors = ['Black']; // Default size if not an array
+      }
+    } catch (e) {
+      parsedColors = ['Black']; // Default size if parsing fails
+    }
     let parsedSizes;
     try {
       parsedSizes = JSON.parse(sizes);
       if (!Array.isArray(parsedSizes)) {
-        parsedSizes = ['M'];
+        parsedSizes = ['M']; // Default size if not an array
       }
     } catch (e) {
-      parsedSizes = ['M'];
+      parsedSizes = ['M']; // Default size if parsing fails
     }
-
-    let parsedColors = [];
-    try {
-      const receivedColors = typeof colors === 'string' ? JSON.parse(colors) : colors;
-      const validColors = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Gray'];
-
-      if (Array.isArray(receivedColors)) {
-        parsedColors = receivedColors.filter(color =>
-          typeof color === 'string' && validColors.includes(color)
-        );
-      }
-    } catch (e) {
-      console.error('Error parsing colors:', e);
-      parsedColors = [];
-    }
-
     const newProduct = new Product({
-      name: name.trim(),
+      name,
       price: Number(price),
       images: imageUrls,
-      bestSeller: bestSeller === 'true',
+      bestSeller: bestSeller === 'true'? true:false,
       sizes: parsedSizes,
-      colors: parsedColors,
-      description: description.trim(),
-      category: category.trim()
+      description,
+      category,
+      date:Date.now()
     });
 
     await newProduct.save();
 
     return res.status(201).json({
       success: true,
-      message: 'Product added successfully',
-      product: {
-        _id: newProduct._id,
-        name: newProduct.name,
-        price: newProduct.price,
-        images: newProduct.images,
-        colors: newProduct.colors,
-        sizes: newProduct.sizes,
-        category: newProduct.category
-      }
+      message: "Product added successfully",
+      product: newProduct,
     });
 
   } catch (error) {
     console.error('Error adding product:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Error adding product',
-      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Error adding product' 
     });
   }
 };
-
 // List all products
 const ListProducts = async (req, res) => {
   try {
