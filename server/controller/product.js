@@ -11,111 +11,73 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-import Product from '../models/Product.js';
-import cloudinary from 'cloudinary';
-
-const addProduct = async (req, res) => {
+const AddProducts = async (req, res) => {
   try {
-    // 1. Validate required fields
-    const requiredFields = ['name', 'price', 'description', 'category'];
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
-        return res.status(400).json({
-          success: false,
-          message: `${field} is required`
-        });
-      }
-    }
+    console.log('Received files:', req.files); // Debug log
+    
+    const { name, price, description, category, bestSeller, sizes } = req.body;
+    console.log('req.files:', req.files);
+console.log('req.body:', req.body);
 
-    // 2. Handle image uploads
-    const images = [
-      req.files?.images1?.[0],
-      req.files?.images2?.[0],
-      req.files?.images3?.[0],
-      req.files?.images4?.[0]
-    ].filter(Boolean);
+    // Safer file access
+    const image1 = req.files?.images1?.[0];
+    const image2 = req.files?.images2?.[0];
+    const image3 = req.files?.images3?.[0];
+    const image4 = req.files?.images4?.[0];
+
+    const images = [image1, image2, image3, image4].filter(Boolean);
 
     if (images.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one image is required'
+      return res.status(400).json({ 
+        success: false, 
+        message: 'At least one image is required' 
       });
     }
-
-    // 3. Upload images to Cloudinary
-    const imageUploads = images.map(file => 
-      cloudinary.uploader.upload(file.path, {
-        folder: 'ecommerce/products',
-        width: 800,
-        height: 800,
-        crop: 'fill'
+    const imageUrls = await Promise.all(
+      images.map(async(item)=>{
+let result=await cloudinary.uploader.upload(item.path,{resource_type:"image"})
+return  result.secure_url
       })
-    );
-
-    const imageResults = await Promise.all(imageUploads);
-    const imageUrls = imageResults.map(result => result.secure_url);
-
-    // 4. Parse and validate colors
-    let colors = [];
+    )
+   
+    // Parse sizes (frontend sends as JSON string)
+    let parsedSizes;
     try {
-      const parsedColors = JSON.parse(req.body.colors || '[]');
-      if (Array.isArray(parsedColors)) {
-        colors = parsedColors.map(color => ({
-          name: color?.name?.trim() || 'Unnamed',
-          code: color?.code?.match(/^#([0-9a-f]{3}){1,2}$/i) 
-            ? color.code 
-            : '#000000'
-        }));
+      parsedSizes = JSON.parse(sizes);
+      if (!Array.isArray(parsedSizes)) {
+        parsedSizes = ['M']; // Default size if not an array
       }
-    } catch (error) {
-      console.error('Color parsing error:', error);
+    } catch (e) {
+      parsedSizes = ['M']; // Default size if parsing fails
     }
 
-    // 5. Parse and validate sizes
-    let sizes = ['M']; // Default size
-    try {
-      const parsedSizes = JSON.parse(req.body.sizes || '[]');
-      if (Array.isArray(parsedSizes) && parsedSizes.length > 0) {
-        sizes = parsedSizes.filter(size => 
-          ['XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(size)
-        );
-      }
-    } catch (error) {
-      console.error('Size parsing error:', error);
-    }
-
-    // 6. Create product
-    const product = new Product({
-      name: req.body.name,
-      price: parseFloat(req.body.price),
-      description: req.body.description,
-      category: req.body.category,
-      bestSeller: req.body.bestSeller === 'true',
+    const newProduct = new Product({
+      name,
+      price: Number(price),
       images: imageUrls,
-      colors,
-      sizes
+      bestSeller: bestSeller === 'true'? true:false,
+      sizes: parsedSizes,
+      description,
+      category,
+      date:Date.now()
     });
 
-    await product.save();
+    await newProduct.save();
 
-    // 7. Return success response
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      message: 'Product created successfully',
-      product
+      message: "Product added successfully",
+      product: newProduct,
     });
 
   } catch (error) {
-    console.error('Error creating product:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error creating product',
-      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    console.error('Error adding product:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Error adding product' 
     });
   }
 };
-
-export { addProduct };
 // List all products
 const ListProducts = async (req, res) => {
   try {
