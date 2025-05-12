@@ -43,44 +43,75 @@ const AddProducts = async (req, res) => {
       })
     );
 
-    // Parse sizes and colors safely
-    const parseArray = (str, defaultValue) => {
-      try {
-        const parsed = JSON.parse(str);
-        return Array.isArray(parsed) ? parsed : defaultValue;
-      } catch (e) {
-        return defaultValue;
+    // Parse sizes safely
+    let parsedSizes;
+    try {
+      parsedSizes = JSON.parse(sizes);
+      if (!Array.isArray(parsedSizes)) {
+        parsedSizes = ['M']; // Default size
       }
-    };
+    } catch (e) {
+      parsedSizes = ['M'];
+    }
 
+    // Parse and validate colors
+    let parsedColors = [];
+    try {
+      // First try to parse the colors JSON
+      const receivedColors = typeof colors === 'string' ? JSON.parse(colors) : colors;
+      
+      // Define valid color options
+      const validColors = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Gray'];
+      
+      // Filter to only include valid color strings
+      if (Array.isArray(receivedColors)) {
+        parsedColors = receivedColors.filter(color => 
+          typeof color === 'string' && validColors.includes(color)
+        );
+      }
+    } catch (e) {
+      console.error('Error parsing colors:', e);
+      parsedColors = []; // Default to empty array if parsing fails
+    }
+
+    // Create new product with validated data
     const newProduct = new Product({
-      name,
+      name: name.trim(),
       price: Number(price),
       images: imageUrls,
       bestSeller: bestSeller === 'true',
-      sizes: parseArray(sizes, ['M']),
-      colors: parseArray(colors, ['Black']), // Properly parse colors
-      description,
-      category
-      // timestamps will be added automatically by schema
+      sizes: parsedSizes,
+      colors: parsedColors,
+      description: description.trim(),
+      category: category.trim()
     });
 
+    // Save to database
     await newProduct.save();
 
     return res.status(201).json({
       success: true,
       message: "Product added successfully",
-      product: newProduct
+      product: {
+        _id: newProduct._id,
+        name: newProduct.name,
+        price: newProduct.price,
+        images: newProduct.images,
+        colors: newProduct.colors,
+        sizes: newProduct.sizes,
+        category: newProduct.category
+      }
     });
 
   } catch (error) {
     console.error('Error adding product:', error);
     return res.status(500).json({ 
       success: false, 
-      message: error.message || 'Error adding product' 
+      message: error.message || 'Error adding product',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
-};
+};;
 // List all products
 const ListProducts = async (req, res) => {
   try {

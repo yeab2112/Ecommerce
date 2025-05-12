@@ -56,21 +56,41 @@ function Add() {
   };
 
   // Added color selection handler
-  const handleColorChange = (e, color) => {
-    const { checked } = e.target;
-    let updatedColors = [...product.colors];
-  
-    if (checked) {
-      updatedColors.push(color); // Pushing full color object
-    } else {
-      updatedColors = updatedColors.filter(c => c.name !== color.name);
-    }
-  
-    setProduct({
-      ...product,
-      colors: updatedColors, // Storing array of objects
-    });
-  };
+  // Update the handleColorChange function to store only color names
+const handleColorChange = (e, color) => {
+  const { checked } = e.target;
+  let updatedColors = [...product.colors];
+
+  if (checked) {
+    updatedColors.push(color.name); // Store only the color name
+  } else {
+    updatedColors = updatedColors.filter(c => c !== color.name);
+  }
+
+  setProduct({
+    ...product,
+    colors: updatedColors, // Now storing array of strings
+  });
+};
+
+// Update the color checkbox rendering:
+{COLOR_OPTIONS.map((color) => (
+  <label key={color.name} className="flex items-center space-x-2">
+    <input
+      type="checkbox"
+      checked={product.colors.includes(color.name)} // Check against color name
+      onChange={(e) => handleColorChange(e, color)}
+      className="h-4 w-4"
+    />
+    <div className="flex items-center">
+      <div 
+        className="w-5 h-5 rounded-full border border-gray-300 mr-1"
+        style={{ backgroundColor: color.code }}
+      ></div>
+      <span>{color.name}</span>
+    </div>
+  </label>
+))}
 
   const handleImageUpload = async (e, index) => {
     const files = e.target.files;
