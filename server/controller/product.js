@@ -13,11 +13,18 @@ cloudinary.config({
 
 const AddProducts = async (req, res) => {
   try {
-    console.log('Received files:', req.files); // Debug log
-    
-    const { name, price, description, category, bestSeller, sizes } = req.body;
-    console.log('req.files:', req.files);
-console.log('req.body:', req.body);
+    console.log('Received files:', req.files);
+    console.log('Request body:', req.body);
+
+    const { 
+      name, 
+      price, 
+      description, 
+      category, 
+      bestSeller, 
+      sizes,
+      colors // Added colors to destructuring
+    } = req.body;
 
     // Safer file access
     const image1 = req.files?.images1?.[0];
@@ -33,33 +40,46 @@ console.log('req.body:', req.body);
         message: 'At least one image is required' 
       });
     }
+
     const imageUrls = await Promise.all(
-      images.map(async(item)=>{
-let result=await cloudinary.uploader.upload(item.path,{resource_type:"image"})
-return  result.secure_url
+      images.map(async (item) => {
+        const result = await cloudinary.uploader.upload(item.path, { resource_type: "image" });
+        return result.secure_url;
       })
-    )
-   
-    // Parse sizes (frontend sends as JSON string)
+    );
+
+    // Parse sizes and colors (frontend sends as JSON strings)
     let parsedSizes;
+    let parsedColors;
+    
     try {
       parsedSizes = JSON.parse(sizes);
       if (!Array.isArray(parsedSizes)) {
-        parsedSizes = ['M']; // Default size if not an array
+        parsedSizes = ['M']; // Default size
       }
     } catch (e) {
-      parsedSizes = ['M']; // Default size if parsing fails
+      parsedSizes = ['M'];
+    }
+
+    try {
+      parsedColors = JSON.parse(colors);
+      if (!Array.isArray(parsedColors)) {
+        parsedColors = []; // Default empty array if parsing fails
+      }
+    } catch (e) {
+      parsedColors = [];
     }
 
     const newProduct = new Product({
       name,
       price: Number(price),
       images: imageUrls,
-      bestSeller: bestSeller === 'true'? true:false,
+      bestSeller: bestSeller === 'true',
       sizes: parsedSizes,
+      colors: parsedColors, // Added colors to product creation
       description,
       category,
-      date:Date.now()
+      date: Date.now()
     });
 
     await newProduct.save();

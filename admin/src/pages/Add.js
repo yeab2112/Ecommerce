@@ -119,11 +119,11 @@ function Add() {
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
-
+  
     try {
       const atoken = localStorage.getItem('atoken');
       if (!atoken) throw new Error('Authentication required');
-
+  
       const formData = new FormData();
       formData.append('name', product.name);
       formData.append('description', product.description);
@@ -131,13 +131,14 @@ function Add() {
       formData.append('price', product.price);
       formData.append('bestSeller', product.bestSeller);
       formData.append('sizes', JSON.stringify(product.sizes));
-      formData.append('colors', JSON.stringify(product.colors)); 
-
+      formData.append('colors', JSON.stringify(product.colors)); // Added colors to form data
+  
+      // Add images only if they exist
       if (product.images[0]) formData.append('images1', product.images[0]);
       if (product.images[1]) formData.append('images2', product.images[1]);
       if (product.images[2]) formData.append('images3', product.images[2]);
       if (product.images[3]) formData.append('images4', product.images[3]);
-
+  
       const response = await fetch('https://ecommerce-rho-hazel.vercel.app/api/product/add_products', {
         method: 'POST',
         body: formData,
@@ -145,23 +146,24 @@ function Add() {
           'Authorization': `Bearer ${atoken}`,
         },
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add product');
+        throw new Error(errorData.message || 'Failed to add product');
       }
-
+  
+      // Reset form after successful submission
       setProduct({
         name: '',
         description: '',
         category: '',
         price: '',
         sizes: [],
-        colors: [], 
+        colors: [],
         bestSeller: false,
         images: [],
       });
-
+  
       toast.success('Product added successfully!');
     } catch (err) {
       setError(err.message);
@@ -169,6 +171,7 @@ function Add() {
     } finally {
       setIsSubmitting(false);
     }
+  ;
   };
 
   return (
