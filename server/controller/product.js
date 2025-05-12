@@ -13,13 +13,12 @@ cloudinary.config({
 
 const AddProducts = async (req, res) => {
   try {
-    console.log('Received files:', req.files); // Debug log
-    
-    const { name, price, description, category, bestSeller, sizes } = req.body;
-    console.log('req.files:', req.files);
-console.log('req.body:', req.body);
+    console.log('Received files:', req.files);
+    console.log('req.body:', req.body);
 
-    // Safer file access
+    const { name, price, description, category, bestSeller, sizes, colors } = req.body;
+
+    // ERROR 1: Not properly handling potential undefined files
     const image1 = req.files?.images1?.[0];
     const image2 = req.files?.images2?.[0];
     const image3 = req.files?.images3?.[0];
@@ -33,33 +32,46 @@ console.log('req.body:', req.body);
         message: 'At least one image is required' 
       });
     }
+
     const imageUrls = await Promise.all(
-      images.map(async(item)=>{
-let result=await cloudinary.uploader.upload(item.path,{resource_type:"image"})
-return  result.secure_url
+      images.map(async(item) => {
+        let result = await cloudinary.uploader.upload(item.path, {resource_type:"image"})
+        return result.secure_url
       })
     )
-   
-    // Parse sizes (frontend sends as JSON string)
+
+    // ERROR 2: Parsing 'sizes' instead of 'colors' for colors variable
+    let parsedColors;
+    try {
+      parsedColors = JSON.parse(sizes); // WRONG: Should be parsing 'colors' not 'sizes'
+      if (!Array.isArray(parsedColors)) {
+        parsedColors = ['']; // Default value makes no sense for colors
+      }
+    } catch (e) {
+      parsedColors = ['red']; // Arbitrary default color
+    }
+
+    // ERROR 3: Duplicate parsing of sizes (not wrong but redundant)
     let parsedSizes;
     try {
       parsedSizes = JSON.parse(sizes);
       if (!Array.isArray(parsedSizes)) {
-        parsedSizes = ['M']; // Default size if not an array
+        parsedSizes = ['M'];
       }
     } catch (e) {
-      parsedSizes = ['M']; // Default size if parsing fails
+      parsedSizes = ['M'];
     }
 
+    // ERROR 4: Incorrect Date.now() usage with colors parameter
     const newProduct = new Product({
       name,
       price: Number(price),
       images: imageUrls,
-      bestSeller: bestSeller === 'true'? true:false,
+      bestSeller: bestSeller === 'true' ? true : false,
       sizes: parsedSizes,
       description,
       category,
-      date:Date.now()
+      date: Date.now(colors) // WRONG: Date.now() doesn't take parameters
     });
 
     await newProduct.save();

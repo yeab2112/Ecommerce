@@ -59,16 +59,16 @@ function Add() {
   const handleColorChange = (e, color) => {
     const { checked } = e.target;
     let updatedColors = [...product.colors];
-
+  
     if (checked) {
-      updatedColors.push(color);
+      updatedColors.push(color); // Pushing full color object
     } else {
       updatedColors = updatedColors.filter(c => c.name !== color.name);
     }
-
+  
     setProduct({
       ...product,
-      colors: updatedColors,
+      colors: updatedColors, // Storing array of objects
     });
   };
 
@@ -131,8 +131,7 @@ function Add() {
       formData.append('price', product.price);
       formData.append('bestSeller', product.bestSeller);
       formData.append('sizes', JSON.stringify(product.sizes));
-      formData.append('colors', JSON.stringify(product.colors)); 
-
+      formData.append('colors', JSON.stringify(product.colors))
       if (product.images[0]) formData.append('images1', product.images[0]);
       if (product.images[1]) formData.append('images2', product.images[1]);
       if (product.images[2]) formData.append('images3', product.images[2]);
