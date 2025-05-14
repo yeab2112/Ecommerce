@@ -15,7 +15,6 @@ function Add() {
     images: [],
   });
 
-  // Common colors for clothin
   const COLOR_OPTIONS = [
     { name: 'Black', code: '#000000' },
     { name: 'White', code: '#FFFFFF' },
@@ -55,7 +54,6 @@ function Add() {
     });
   };
 
-  // Added color selection handler
   const handleColorChange = (e, color) => {
     const { checked } = e.target;
     let updatedColors = [...product.colors];
@@ -133,10 +131,9 @@ function Add() {
       formData.append('sizes', JSON.stringify(product.sizes));
       formData.append('colors', JSON.stringify(product.colors)); 
 
-      if (product.images[0]) formData.append('images1', product.images[0]);
-      if (product.images[1]) formData.append('images2', product.images[1]);
-      if (product.images[2]) formData.append('images3', product.images[2]);
-      if (product.images[3]) formData.append('images4', product.images[3]);
+      product.images.forEach((image, index) => {
+        if (image) formData.append(`images${index + 1}`, image);
+      });
 
       const response = await fetch('https://ecommerce-rho-hazel.vercel.app/api/product/add_products', {
         method: 'POST',
@@ -177,7 +174,6 @@ function Add() {
 
       {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
 
-      {/* Image Upload Fields */}
       <div className="mb-6 text-center">
         <label className="block text-sm font-medium text-gray-700 mb-2 md:mb-4">Upload Images (Max 4)</label>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-4 md:gap-4">
@@ -232,9 +228,7 @@ function Add() {
         )}
       </div>
 
-      {/* Product Form */}
       <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-        {/* Product Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Name</label>
           <input
@@ -247,7 +241,6 @@ function Add() {
           />
         </div>
 
-        {/* Product Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Description</label>
           <textarea
@@ -260,7 +253,6 @@ function Add() {
           />
         </div>
 
-        {/* Product Category */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Category</label>
           <select
@@ -277,7 +269,6 @@ function Add() {
           </select>
         </div>
 
-        {/* Product Price */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Price</label>
           <input
@@ -290,7 +281,6 @@ function Add() {
           />
         </div>
 
-        {/* Product Sizes */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Available Sizes</label>
           <div className="flex flex-wrap gap-3">
@@ -310,7 +300,6 @@ function Add() {
           </div>
         </div>
 
-        {/* Product Colors - Added this section */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Available Colors</label>
           <div className="flex flex-wrap gap-3">
@@ -335,7 +324,6 @@ function Add() {
           </div>
         </div>
 
-        {/* Best Seller Checkbox */}
         <div className="flex items-center">
           <input
             type="checkbox"
@@ -347,7 +335,6 @@ function Add() {
           <label className="ml-2 text-sm font-medium text-gray-700">Mark as Best Seller</label>
         </div>
 
-        {/* Add Button */}
         <button
           type="submit"
           disabled={isSubmitting}

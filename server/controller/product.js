@@ -13,18 +13,16 @@ cloudinary.config({
 
 const AddProducts = async (req, res) => {
   try {
-    console.log('Received files:', req.files); // Debug log
+    console.log('Received files:', req.files);
+    console.log('Request body:', req.body);
     
-    const { name, price, description, category, bestSeller, sizes , colors} = req.body;
-    console.log('req.files:', req.files);
-console.log('req.body:', req.body);
+    const { name, price, description, category, bestSeller, sizes, colors } = req.body;
 
-    // Safer file access
+    // File handling
     const image1 = req.files?.images1?.[0];
     const image2 = req.files?.images2?.[0];
     const image3 = req.files?.images3?.[0];
     const image4 = req.files?.images4?.[0];
-
     const images = [image1, image2, image3, image4].filter(Boolean);
 
     if (images.length === 0) {
@@ -33,41 +31,49 @@ console.log('req.body:', req.body);
         message: 'At least one image is required' 
       });
     }
+
+    // Upload images to Cloudinary
     const imageUrls = await Promise.all(
-      images.map(async(item)=>{
-let result=await cloudinary.uploader.upload(item.path,{resource_type:"image"})
-return  result.secure_url
+      images.map(async (item) => {
+        const result = await cloudinary.uploader.upload(item.path, {
+          resource_type: "image"
+        });
+        return result.secure_url;
       })
-    )
-   
-    // Parse sizes (frontend sends as JSON string)
-    let parsedColors;
-    try {
-      parsedColors = JSON.parse(colors);
-      if (!Array.isArray(parsedColors)) {
-        parsedColors = ['Black']; // Default size if not an array
-      }
-    } catch (e) {
-      parsedColors = ['Black']; // Default size if parsing fails
-    }
-    let parsedSizes;
+    );
+
+    // Parse sizes and colors
+    let parsedSizes = ['M']; // Default size
     try {
       parsedSizes = JSON.parse(sizes);
       if (!Array.isArray(parsedSizes)) {
-        parsedSizes = ['M']; // Default size if not an array
+        parsedSizes = ['M'];
       }
     } catch (e) {
-      parsedSizes = ['M']; // Default size if parsing fails
+      console.log('Error parsing sizes, using default', e);
     }
+
+    let parsedColors = []; // Default empty array
+    try {
+      parsedColors = JSON.parse(colors);
+      if (!Array.isArray(parsedColors)) {
+        parsedColors = [];
+      }
+    } catch (e) {
+      console.log('Error parsing colors, using default', e);
+    }
+
+    // Create new product
     const newProduct = new Product({
       name,
       price: Number(price),
       images: imageUrls,
-      bestSeller: bestSeller === 'true'? true:false,
+      bestSeller: bestSeller === 'true',
       sizes: parsedSizes,
+      colors: parsedColors, // Now properly included
       description,
       category,
-      date:Date.now()
+      date: Date.now()
     });
 
     await newProduct.save();
@@ -85,7 +91,7 @@ return  result.secure_url
       message: error.message || 'Error adding product' 
     });
   }
-};
+};;
 // List all products
 const ListProducts = async (req, res) => {
   try {
