@@ -11,7 +11,10 @@ function Collection() {
 
   useEffect(() => {
     getProducts();
-  }, [getProducts]); // Removed products from dependencies to prevent infinite loops
+  }, [getProducts]);
+
+  if (!products) return <div>Loading products...</div>;
+  const safeProducts = Array.isArray(products) ? products : [];
 
   const handleCategoryChange = (category) => {
     setSelectedCategories((prev) =>
@@ -25,7 +28,7 @@ function Collection() {
     setSortOption(e.target.value);
   };
 
-  const filteredProducts = products
+  const filteredProducts = safeProducts
     .filter((product) =>
       (!selectedCategories.length || selectedCategories.includes(product.category)) &&
       (!search || product.name.toLowerCase().includes(search.toLowerCase()))
@@ -66,7 +69,7 @@ function Collection() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Filters Section - Mobile Slide-in */}
+        {/* Filters Section */}
         <div className={`fixed md:static inset-0 z-40 md:z-auto bg-white md:bg-transparent transform ${
           showFilters ? 'translate-x-0' : '-translate-x-full'
         } md:transform-none transition-transform duration-300 ease-in-out md:w-1/6 p-4 md:border-r-2 md:border-gray-300 overflow-y-auto`}>
@@ -76,9 +79,7 @@ function Collection() {
               onClick={() => setShowFilters(false)}
               className="text-gray-500 hover:text-gray-700"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              ✕
             </button>
           </div>
           
@@ -98,7 +99,6 @@ function Collection() {
           </div>
         </div>
 
-        {/* Overlay for mobile filters */}
         {showFilters && (
           <div 
             className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"
@@ -108,7 +108,6 @@ function Collection() {
 
         {/* Products Section */}
         <div className="w-full md:w-5/6">
-          {/* Desktop Header */}
           <div className="hidden md:flex items-center justify-between mb-6">
             <Title title1="All" title2="Collection" />
             <div className="flex items-center gap-4">
@@ -125,7 +124,6 @@ function Collection() {
             </div>
           </div>
 
-          {/* Products Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
@@ -134,17 +132,35 @@ function Collection() {
                   to={`/product/${product._id}`}
                   className="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
                 >
-                  <div className="aspect-square overflow-hidden">
+                  <div className="aspect-square overflow-hidden relative">
                     <img
                       src={product.images?.[0] || '/placeholder-product.jpg'}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                     />
+                    {product.bestSeller && (
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                        Best Seller
+                      </div>
+                    )}
                   </div>
                   <div className="p-3">
                     <h3 className="font-semibold text-gray-800 line-clamp-1">{product.name}</h3>
                     <p className="text-sm text-gray-500 capitalize">{product.category}</p>
+                    <div className="flex items-center mt-1 space-x-1">
+                      {product.colors?.slice(0, 3).map((color, i) => (
+                        <div 
+                          key={i}
+                          className="w-3 h-3 rounded-full border border-gray-200"
+                          style={{ backgroundColor: color.code }}
+                          title={color.name}
+                        />
+                      ))}
+                      {product.colors?.length > 3 && (
+                        <span className="text-xs text-gray-400">+{product.colors.length - 3}</span>
+                      )}
+                    </div>
                     <p className="font-bold text-blue-600 mt-1">${product.price.toFixed(2)}</p>
                   </div>
                 </Link>
