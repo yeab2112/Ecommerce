@@ -28,8 +28,16 @@ function PlaceOrder() {
     setDeliveryInfo({ ...deliveryInfo, [name]: value });
   };
 
+  const handleColorChange = (index, color) => {
+    const updatedCart = [...cart];
+    updatedCart[index].color = color;
+    setCart(updatedCart);
+  };
+
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const finalTotal = totalPrice + delivery_fee;
+
+  const colorOptions = ['Red', 'Blue', 'Black', 'White', 'Green'];
 
   const initiateChapaPayment = async (orderId) => {
     setIsProcessingPayment(true);
@@ -86,8 +94,9 @@ function PlaceOrder() {
         deliveryInfo,
         paymentMethod,
         items: cart.map(item => ({
-          product: item._id,  
+          product: item._id,
           size: item.size,
+          color: item.color || 'default',
           quantity: item.quantity,
           price: item.price,
           name: item.name,
@@ -163,15 +172,36 @@ function PlaceOrder() {
           </div>
         </div>
 
-        {/* Order Summary & Payment */}
+        {/* Order Summary */}
         <div className="p-4 border rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
 
           <div className="space-y-4 mb-6">
             {cart.map((item, index) => (
-              <div key={index} className="flex justify-between text-sm">
-                <span>{item.name} (Size: {item.size}, Qty: {item.quantity})</span>
-                <span>{currency}{(item.price * item.quantity).toFixed(2)}</span>
+              <div key={index} className="border-b pb-4">
+                <div className="flex justify-between text-sm">
+                  <span>{item.name} (Size: {item.size}, Qty: {item.quantity})</span>
+                  <span>{currency}{(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+                <div className="mt-2">
+                  <p className="text-sm font-medium mb-1">Select Color:</p>
+                  <div className="flex gap-2">
+                    {colorOptions.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => handleColorChange(index, color)}
+                        className={`w-6 h-6 rounded-full border transition-all duration-150 ${
+                          item.color === color ? 'ring-2 ring-blue-500 scale-110' : ''
+                        }`}
+                        style={{ backgroundColor: color.toLowerCase() }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                  {item.color && (
+                    <p className="text-xs mt-1 text-gray-600">Selected: <strong>{item.color}</strong></p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -190,13 +220,13 @@ function PlaceOrder() {
             <span>{currency}{finalTotal.toFixed(2)}</span>
           </div>
 
-          {/* Payment Method Buttons */}
+          {/* Payment Method */}
           <div className="mt-6">
             <h2 className="text-lg font-semibold mb-2">Select Payment Method</h2>
             <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={() => setPaymentMethod('Cash on Delivery')}
-                className={`w-full sm:w-1/2 p-2 text-sm rounded-md text-white whitespace-nowrap ${
+                className={`w-full sm:w-1/2 p-2 text-sm rounded-md text-white ${
                   paymentMethod === 'Cash on Delivery' ? 'bg-green-600' : 'bg-gray-500'
                 }`}
               >
@@ -204,7 +234,7 @@ function PlaceOrder() {
               </button>
               <button
                 onClick={() => setPaymentMethod('Online Payment')}
-                className={`w-full sm:w-1/2 p-2 text-sm rounded-md text-white whitespace-nowrap ${
+                className={`w-full sm:w-1/2 p-2 text-sm rounded-md text-white ${
                   paymentMethod === 'Online Payment' ? 'bg-green-600' : 'bg-gray-500'
                 }`}
               >
@@ -212,24 +242,22 @@ function PlaceOrder() {
               </button>
             </div>
             {paymentMethod === 'Online Payment' && (
-              <div className="mt-2 text-sm text-gray-600">
-                You will be redirected to Chapa to complete payment.
-              </div>
+              <p className="mt-2 text-sm text-gray-600">You will be redirected to Chapa for secure payment.</p>
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* Confirm Buttons */}
           <div className="flex flex-col sm:flex-row justify-between gap-4 mt-6">
             <button
               onClick={() => navigate('/cart')}
-              className="bg-gray-500 text-white py-2 px-4 rounded-md w-full sm:w-1/2 whitespace-nowrap"
+              className="bg-gray-500 text-white py-2 px-4 rounded-md w-full sm:w-1/2"
             >
               Go Back
             </button>
             <button
               onClick={handleOrderConfirmation}
               disabled={isSubmitting || isProcessingPayment}
-              className={`bg-blue-600 text-white py-2 px-4 rounded-md w-full sm:w-1/2 whitespace-nowrap ${
+              className={`bg-blue-600 text-white py-2 px-4 rounded-md w-full sm:w-1/2 ${
                 isSubmitting || isProcessingPayment ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
