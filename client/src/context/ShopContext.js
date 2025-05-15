@@ -85,39 +85,41 @@ function ShopContextProvider({ children }) {
 
   // Fetch cart from API
   const fetchCart = useCallback(async () => {
-  if (!token) {
-    setCart([]);
-    return;
-  }
+    if (!token) {
+      setCart([]);
+      return;
+    }
 
-  try {
-    const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/cart/get', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (response.data.success) {
-      const cartData = response.data.cartdata || {};
-      
-      // ✅ Correct cartKey splitting to handle color
-      const cartArray = Object.keys(cartData).map(key => {
-        const [productId, size, color] = key.split('_');
-        return {
-          ...cartData[key],
-          _id: productId,
-          size,
-          color,
-          cartKey: key
-        };
+    try {
+      const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/cart/get', {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      setCart(cartArray);
+      if (response.data.success) {
+        const cartData = response.data.cartdata || {};
+        
+        // Convert cart object to array with proper structure
+        const cartArray = Object.entries(cartData).map(([cartKey, item]) => ({
+          ...item,
+          _id: item.productId || item.product, // Handle both cases
+          cartKey,
+          productId: item.productId || item.product, // Consistent field
+          size: item.size,
+          color: item.color,
+          quantity: item.quantity || 1,
+          price: item.price || 0,
+          name: item.name || 'Unknown Product',
+          image: item.image || ''
+        }));
+
+        setCart(cartArray);
+      }
+    } catch (error) {
+      console.error('Cart fetch error:', error);
+      toast.error(error.response?.data?.message || 'Failed to load cart');
+      setCart([]);
     }
-  } catch (error) {
-    console.error('Cart fetch error:', error);
-    toast.error(error.response?.data?.message || 'Failed to load cart');
-    setCart([]);
-  }
-}, [token]);
+  }, [token]);
 
 
   // Calculate cart totals safely
@@ -146,201 +148,141 @@ function ShopContextProvider({ children }) {
   }, [getProducts, fetchCart, fetchUserData, token]);
 
   // Add to cart function
- const addToCart = async (productId, size, color) => {
-  console.log('Attempting to add to cart:', { productId, size, color }); // Debug log
-  
-  // 1. Check authentication
-  if (!token) {
-    console.error('No token found - redirecting to login');
-    toast.error('Please login to add items to cart');
-    navigate('/login');
-    return false;
-  }
-
-  // 2. Validate inputs
-  if (!size) {
-    toast.error('Please select a size');
-    return false;
-  }
-  if (!color) {
-    toast.error('Please select a color');
-    return false;
-  }
-
-  const normalizedSize = size.trim().toUpperCase();
-  const normalizedColor = typeof color === 'string' ? color.trim() : color.name?.trim();
-  const toastId = toast.loading('Adding to cart...');
-
-  try {
-    console.log('Sending request to API...');
-    const response = await axios.post(
-      'https://ecommerce-rho-hazel.vercel.app/api/cart/add',
-      { 
-        productId, 
-        size: normalizedSize,
-        color: normalizedColor 
-      },
-      { 
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } 
-      }
-    );
-
-    console.log('API response:', response.data);
-
-    if (response.data.success) {
-      // 3. Find the product in local state
-      const product = products.find(p => p._id === productId);
-      if (!product) {
-        console.error('Product not found in local state:', productId);
-        throw new Error('Product data not available');
-      }
-
-      // 4. Update local cart state
-      setCart(prevCart => {
-        console.log('Previous cart:', prevCart);
-        const existingIndex = prevCart.findIndex(
-          item => item.productId === productId && 
-                 item.size === normalizedSize && 
-                 item.color === normalizedColor
-        );
-
-        const newCart = existingIndex >= 0
-          ? prevCart.map((item, index) => 
-              index === existingIndex 
-                ? { ...item, quantity: item.quantity + 1 }
-                : item
-            )
-          : [
-              ...prevCart,
-              {
-                productId,
-                product, // Store full product details
-                size: normalizedSize,
-                color: normalizedColor,
-                quantity: 1,
-                price: product.price,
-                name: product.name,
-                image: product.images?.[0] || '',
-                addedAt: new Date().toISOString()
-              }
-            ];
-
-        console.log('Updated cart:', newCart);
-        return newCart;
-      });
-
-      toast.update(toastId, {
-        render: 'Added to cart successfully!',
-        type: 'success',
-        isLoading: false,
-        autoClose: 2000
-      });
-      return true;
+ // Add to cart function - Updated
+  const addToCart = async (productId, size, color) => {
+    if (!token) {
+      toast.error('Please login to add items to cart');
+      navigate('/login');
+      return false;
     }
 
-    throw new Error(response.data.message || 'Failed to add to cart');
-  } catch (error) {
-    console.error('Add to cart error:', {
-      message: error.message,
-      response: error.response?.data,
-      stack: error.stack
-    });
-    
-    toast.update(toastId, {
-      render: error.response?.data?.message || error.message || 'Failed to add to cart',
-      type: 'error',
-      isLoading: false,
-      autoClose: 3000
-    });
-    return false;
-  }
-};
+    // Normalize inputs
+    const normalizedSize = size?.trim()?.toUpperCase();
+    const normalizedColor = typeof color === 'string' 
+      ? color.trim() 
+      : color?.name?.trim();
+
+    if (!normalizedSize || !normalizedColor) {
+      toast.error('Please select both size and color');
+      return false;
+    }
+
+    const toastId = toast.loading('Adding to cart...');
+
+    try {
+      const response = await axios.post(
+        'https://ecommerce-rho-hazel.vercel.app/api/cart/add',
+        { 
+          productId, 
+          size: normalizedSize,
+          color: normalizedColor 
+        },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        await fetchCart(); // Refresh cart instead of local updates
+        toast.update(toastId, {
+          render: 'Added to cart successfully!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 2000
+        });
+        return true;
+      }
+      throw new Error(response.data.message || 'Failed to add to cart');
+    } catch (error) {
+      console.error('Add to cart error:', error);
+      toast.update(toastId, {
+        render: error.response?.data?.message || error.message || 'Failed to add to cart',
+        type: 'error',
+        isLoading: false,
+        autoClose: 3000
+      });
+      return false;
+    }
+  };
 
   // Update cart item quantity
- const updateCartItem = async (productId, size, color, newQuantity) => {
-  const toastId = toast.loading('Updating cart...');
-  const normalizedSize = size.trim().toUpperCase();
-  const normalizedColor = typeof color === 'string' ? color.trim() : color?.name?.trim();
+  const updateCartItem = async (productId, size, color, newQuantity) => {
+    const toastId = toast.loading('Updating cart...');
+    
+    // Normalize inputs
+    const normalizedSize = size?.trim()?.toUpperCase();
+    const normalizedColor = typeof color === 'string' 
+      ? color.trim() 
+      : color?.name?.trim();
 
-  try {
-    const quantityNumber = Number(newQuantity);
-    if (isNaN(quantityNumber)) {
-      throw new Error('Invalid quantity value');
-    }
+    try {
+      const quantityNumber = Number(newQuantity);
+      if (isNaN(quantityNumber) || quantityNumber < 0) {
+        throw new Error('Invalid quantity value');
+      }
 
-    const response = await axios.put(
-      'https://ecommerce-rho-hazel.vercel.app/api/cart/update',
-      { productId, size: normalizedSize, color: normalizedColor, quantity: quantityNumber },
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    );
+      const response = await axios.put(
+        'https://ecommerce-rho-hazel.vercel.app/api/cart/update',
+        { 
+          productId, 
+          size: normalizedSize, 
+          color: normalizedColor, 
+          quantity: quantityNumber 
+        },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
 
-    if (response.data.success) {
-      const cartKey = `${productId}_${normalizedSize}_${normalizedColor}`;
-
-      setCart(prevCart => {
-        if (quantityNumber <= 0) {
-          return prevCart.filter(item => item.cartKey !== cartKey);
-        }
-
-        return prevCart.map(item => {
-          if (item.cartKey === cartKey) {
-            return { ...item, quantity: quantityNumber };
-          }
-          return item;
+      if (response.data.success) {
+        await fetchCart(); // Refresh cart instead of local updates
+        toast.update(toastId, {
+          render: 'Cart updated successfully!',
+          type: 'success',
+          isLoading: false,
+          autoClose: 2000
         });
-      });
-
+        return true;
+      }
+      throw new Error(response.data.message || 'Failed to update cart');
+    } catch (error) {
+      console.error('Update cart error:', error);
       toast.update(toastId, {
-        render: 'Cart updated successfully!',
-        type: 'success',
+        render: error.response?.data?.message || error.message || 'Failed to update cart',
+        type: 'error',
         isLoading: false,
-        autoClose: 2000
+        autoClose: 3000
       });
-      return true;
+      return false;
     }
+  };
 
-    throw new Error(response.data.message || 'Failed to update cart');
-  } catch (error) {
-    toast.update(toastId, {
-      render: error.response?.data?.message || error.message || 'Failed to update cart',
-      type: 'error',
-      isLoading: false,
-      autoClose: 3000
-    });
+  // Action handlers - Updated
+  const increaseQuantity = async (productId, size, color) => {
+    const item = cart.find(item => 
+      item._id === productId && 
+      item.size === size && 
+      item.color === color
+    );
+    if (!item) return;
+    
+    await updateCartItem(productId, size, color, item.quantity + 1);
+  };
 
-    await fetchCart();
-    return false;
-  }
-};
-
-
-  // Action handlers
- const increaseQuantity = async (productId, size, color) => {
-  const item = cart.find(item => item._id === productId && item.size === size && item.color === color);
-  if (!item) return;
-  
-  await updateCartItem(productId, size, color, item.quantity + 1);
-};
-
-  
-  const decreaseQuantity = async (productId, size,color) => {
-    const item = cart.find(item => item._id === productId && item.size === size && item.color === color);
+  const decreaseQuantity = async (productId, size, color) => {
+    const item = cart.find(item => 
+      item._id === productId && 
+      item.size === size && 
+      item.color === color
+    );
     if (!item) return;
     
     const newQuantity = item.quantity - 1;
-    if (newQuantity <= 0) {
-      await removeFromCart(productId, size,color);
-    } else {
-      await updateCartItem(productId, size, newQuantity,color);
-    }
+    await updateCartItem(productId, size, color, newQuantity);
   };
-  
-  const removeFromCart = async (productId, size,color) => {
-    await updateCartItem(productId, size,color, 0);
+
+  const removeFromCart = async (productId, size, color) => {
+    await updateCartItem(productId, size, color, 0);
   };
+
+
+  // Action handlers
 
   const contextValue = {
     delivery_fee,
