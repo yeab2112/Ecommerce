@@ -31,7 +31,7 @@ function Cart() {
           <div className="space-y-4">
             {cart.map((item) => (
               <div
-                key={`${item._id}_${item.size}`}
+                key={`${item._id}_${item.size}_${item.color}`} // Added color to key for uniqueness
                 className="flex flex-col md:flex-row p-4 border rounded-lg shadow-sm hover:shadow-md transition duration-300 gap-4"
               >
                 {/* Product Image */}
@@ -48,14 +48,15 @@ function Cart() {
                   <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
                   <p className="text-gray-600">{currency}{item.price.toFixed(2)}</p>
                   <p className="text-sm text-gray-500">Size: {item.size}</p>
+                  <p className="text-sm text-gray-500">Color: {item.color}</p>
                 </div>
 
                 {/* Quantity and Remove Controls */}
-                <div className="flex justify-between sm:justify-center items-center ">
+                <div className="flex justify-between sm:justify-center items-center">
                   {/* Quantity Controls */}
                   <div className="flex items-center sm:justify-center space-x-3">
                     <button
-                      onClick={() => decreaseQuantity(item._id, item.size)}
+                      onClick={() => decreaseQuantity(item._id, item.size, item.color)}
                       className="bg-gray-200 hover:bg-gray-300 p-2 rounded-full disabled:opacity-50"
                       disabled={item.quantity <= 1}
                     >
@@ -65,7 +66,7 @@ function Cart() {
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => increaseQuantity(item._id, item.size)}
+                      onClick={() => increaseQuantity(item._id, item.size, item.color)}
                       className="bg-gray-200 hover:bg-gray-300 p-2 rounded-full"
                     >
                       <FaPlus className="text-gray-700 text-xs" />
@@ -74,7 +75,7 @@ function Cart() {
 
                   {/* Remove Button */}
                   <button
-                    onClick={() => removeFromCart(item._id, item.size)}
+                    onClick={() => removeFromCart(item._id, item.size, item.color)}
                     className="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50"
                     aria-label="Remove item"
                   >
