@@ -5,28 +5,46 @@ import RelatedProduct from '../component/Relatedproduct';
 import React, { useContext, useState, useEffect } from 'react';  
 import { ShopContext } from '../context/ShopContext';  
 
-// Color reference for visual display
-const COLOR_REFERENCE = {
-  'Black': '#000000',
-  'White': '#FFFFFF',
-  'Red': '#FF0000',
-  'Blue': '#0000FF',
-  'Green': '#008000',
-  'Yellow': '#FFFF00',
-  'Pink': '#FFC0CB',
-  'Gray': '#808080',
-  // Add more colors as needed
-};
-
 const Product = () => {
   const { productId } = useParams(); 
   const [product, setProduct] = useState(null); 
   const { products, addToCart } = useContext(ShopContext);  
   const [currentImage, setCurrentImage] = useState(null); 
   const [selectedSize, setSelectedSize] = useState(''); 
-  const [selectedColor, setSelectedColor] = useState(''); 
+  const [selectedColor, setSelectedColor] = useState(null); 
   const [error, setError] = useState(''); 
   const [loading, setLoading] = useState(true);  
+
+  // Helper function to normalize color data
+  const normalizeColor = (color) => {
+    if (typeof color === 'string') {
+      return {
+        name: color,
+        code: getColorCode(color),
+        id: color.toLowerCase()
+      };
+    }
+    return {
+      name: color.name || 'Unknown',
+      code: color.code || getColorCode(color.name),
+      id: color._id || color.id || color.name.toLowerCase()
+    };
+  };
+
+  // Get color code from name
+  const getColorCode = (colorName) => {
+    const colorMap = {
+      'black': '#000000',
+      'white': '#FFFFFF',
+      'red': '#FF0000',
+      'blue': '#0000FF',
+      'green': '#008000',
+      'yellow': '#FFFF00',
+      'pink': '#FFC0CB',
+      'gray': '#808080',
+    };
+    return colorMap[colorName?.toLowerCase()] || '#CCCCCC';
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -37,16 +55,23 @@ const Product = () => {
         );
         
         if (response.data) {
+          // Normalize colors to ensure consistent format
+          const normalizedColors = Array.isArray(response.data.colors) 
+            ? response.data.colors.map(normalizeColor)
+            : [normalizeColor('Black')]; // Default color
+
           setProduct({
             ...response.data,
             sizes: response.data.sizes || [], 
-            colors: response.data.colors || ['Black'], // Default to Black if no colors
+            colors: normalizedColors,
             rating: response.data.rating || 4.2,  
           });
+          
           setCurrentImage(response.data.images?.[0] || assets.placeholder); 
+          
           // Auto-select first color if available
-          if (response.data.colors?.length > 0) {
-            setSelectedColor(response.data.colors[0]);
+          if (normalizedColors.length > 0) {
+            setSelectedColor(normalizedColors[0]);
           }
         }
       } catch (error) {
@@ -58,7 +83,8 @@ const Product = () => {
     };
 
     fetchProduct();
-  }, [productId]);  
+  }, [productId,]);  
+
   const handleAddToCart = () => {
     if (!selectedSize) {
       setError('Please select a size.');  
@@ -69,12 +95,10 @@ const Product = () => {
       return;
     }
     setError('');  
-    addToCart({
-      productId: product._id,
-      size: selectedSize,
-      color: selectedColor, // This should be a string (color name)
-    });
+   addToCart(product._id, selectedSize, selectedColor); // ✅ Correct
+
   };
+
   const renderStars = (rating) => {
     const fullStars = Math.floor(rating);  
     const halfStar = rating - fullStars >= 0.5;  
@@ -144,51 +168,51 @@ const Product = () => {
           
           <p className="text-gray-600 mb-4">{product.description}</p>
           
-          {/* Size Selection */}
+          {/* Size Selection - Updated to show label and options on same row */}
           <div className="size-selection mb-4">
-            <h3 className="text-lg font-semibold mb-2">Size:</h3>
-            <div className="flex flex-wrap gap-2">
-              {product.sizes?.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={`px-4 py-2 border rounded-md ${
-                    selectedSize === size
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-800 border-gray-300 hover:border-blue-500'
-                  } transition-colors`}
-                >
-                  {size}
-                </button>
-              ))}
+            <div className="flex items-center gap-4 mb-2">
+              <h3 className="text-lg font-semibold">Size:</h3>
+              <div className="flex flex-wrap gap-2">
+                {product.sizes?.map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setSelectedSize(size)}
+                    className={`px-4 py-2 border rounded-md ${
+                      selectedSize === size
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-800 border-gray-300 hover:border-blue-500'
+                    } transition-colors`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
             </div>
             {error && !selectedSize && (
               <p className="text-red-600 text-sm mt-1">{error}</p>
             )}
           </div>
 
-          {/* Color Selection */}
+          {/* Color Selection - Updated to square format */}
           <div className="color-selection mb-6">
-            <h3 className="text-lg font-semibold mb-2">Color:</h3>
-            <div className="flex flex-wrap gap-3">
-              {product.colors?.map((colorName) => {
-                const colorCode = COLOR_REFERENCE[colorName] || '#CCCCCC';
-                return (
-                  <div 
-                    key={colorName}
-                    onClick={() => setSelectedColor(colorName)}
-                    className={`cursor-pointer p-0.5 rounded-full ${
-                      selectedColor === colorName 
-                        ? 'ring-2 ring-blue-500' 
-                        : 'ring-1 ring-gray-200'
-                    }`}
-                  >
-                    <div 
-                      className="w-10 h-10 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: colorCode }}
-                      title={colorName}
+            <div className="flex items-center gap-4 mb-2">
+              <h3 className="text-lg font-semibold">Color:</h3>
+              <div className="flex flex-wrap gap-2">
+                {product.colors?.map((color) => {
+                  const normalizedColor = normalizeColor(color);
+                  return (
+                    <button
+                      key={normalizedColor.id}
+                      onClick={() => setSelectedColor(normalizedColor)}
+                      className={`w-10 h-10 flex items-center justify-center border rounded-md ${
+                        selectedColor?.id === normalizedColor.id 
+                          ? 'ring-2 ring-blue-500 border-blue-600'
+                          : 'border-gray-300 hover:border-blue-500'
+                      } transition-colors`}
+                      style={{ backgroundColor: normalizedColor.code }}
+                      title={normalizedColor.name}
                     >
-                      {selectedColor === colorName && (
+                      {selectedColor?.id === normalizedColor.id && (
                         <svg 
                           className="w-5 h-5 text-white" 
                           fill="none" 
@@ -203,11 +227,10 @@ const Product = () => {
                           />
                         </svg>
                       )}
-                    </div>
-                    <span className="block text-xs text-center mt-1">{colorName}</span>
-                  </div>
-                );
-              })}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             {error && !selectedColor && (
               <p className="text-red-600 text-sm mt-1">{error}</p>
@@ -238,7 +261,7 @@ const Product = () => {
               <svg className="w-5 h-5 text-blue-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>Available Colors: {product.colors?.join(', ')}</span>
+              <span>Available Colors: {product.colors?.map(c => c.name || c).join(', ')}</span>
             </li>
             <li className="flex items-start">
               <svg className="w-5 h-5 text-blue-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
