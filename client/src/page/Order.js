@@ -126,7 +126,7 @@ function OrderConfirmation() {
 
           return (
             <div key={order._id} className="border rounded-lg overflow-hidden shadow-sm">
-              {/* Order Header - Removed status badge from here */}
+              {/* Order Header */}
               <div className="bg-gray-50 p-4 border-b flex justify-between items-center">
                 <div>
                   <h2 className="font-semibold">
@@ -153,6 +153,17 @@ function OrderConfirmation() {
                       <div className="ml-4">
                         <h3 className="font-medium">{item.name}</h3>
                         <p className="text-sm text-gray-600">Size: {item.size}</p>
+                        {item.color && (
+                          <div className="flex items-center mt-1">
+                            <span className="text-sm text-gray-600 mr-2">Color:</span>
+                            <div 
+                              className="w-4 h-4 rounded-full border border-gray-300"
+                              style={{ backgroundColor: item.color.toLowerCase() }}
+                              title={item.color}
+                            />
+                            <span className="text-sm text-gray-600 ml-1">{item.color}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 

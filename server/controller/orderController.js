@@ -22,6 +22,11 @@ const createOrder = async (req, res) => {
           message: 'Invalid item data in order'
         });
       }
+      
+      // Add default color if not provided
+      if (!item.color) {
+        item.color = 'default';
+      }
     }
 
     // Validate deliveryInfo structure
@@ -35,16 +40,24 @@ const createOrder = async (req, res) => {
       }
     }
 
-    // Create new order
+    // Create new order with color information
     const order = new Order({
       user: userId,
       deliveryInfo,
       paymentMethod,
-      items,
+      items: items.map(item => ({
+        product: item.product,
+        name: item.name,
+        image: item.image,
+        size: item.size,
+        color: item.color || 'default', // Ensure color is included
+        quantity: item.quantity,
+        price: item.price
+      })),
       subtotal,
       deliveryFee,
       total,
-      status: 'pending'
+      status: paymentMethod === 'Cash on Delivery' ? 'pending' : 'payment_pending'
     });
 
     // Save order to database
@@ -80,7 +93,7 @@ const createOrder = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create order',
-      error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : error.message  // Hide details in production
+      error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : error.message
     });
   }
 };

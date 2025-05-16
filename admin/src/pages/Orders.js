@@ -407,10 +407,21 @@ function Orders() {
                         />
                         <div className="flex-1">
                           <p className="font-medium">{item.name}</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm text-gray-600 mt-1">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm text-gray-600 mt-1">
                             <p>Size: {item.size}</p>
                             <p>Qty: {item.quantity}</p>
                             <p>Price: ${item.price.toFixed(2)}</p>
+                            {item.color && (
+                              <div className="flex items-center">
+                                <span>Color: </span>
+                                <div 
+                                  className="w-4 h-4 rounded-full border border-gray-300 ml-1"
+                                  style={{ backgroundColor: item.color.toLowerCase() }}
+                                  title={item.color}
+                                />
+                                <span className="ml-1">{item.color}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
