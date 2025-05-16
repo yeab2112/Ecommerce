@@ -18,6 +18,12 @@ const orderItemSchema = new mongoose.Schema({
     uppercase: true,
     enum: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
   },
+  color: {
+    type: String,
+    required: true,
+    default: 'default',
+    trim: true
+  },
   quantity: {
     type: Number,
     required: true,
