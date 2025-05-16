@@ -83,6 +83,11 @@ const orderSchema = new mongoose.Schema({
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
+  receivedConfirmation: {
+    confirmed: { type: Boolean, default: false },
+    confirmedAt: Date,
+    confirmationNote: String
+  },
   tracking: {
     carrier: String,
     trackingNumber: String,

@@ -250,6 +250,88 @@ const updateOrderStatus = async (req, res) => {
     });
   }
 };
+const confirmOrderReceived = async (req, res) => {
+  try {
+    const { note, allItemsReceived, itemsInGoodCondition } = req.body;
+    const orderId = req.params.id;
+    const userId = req.user._id;
 
-export { createOrder,getOrderTracking, getUserOrders,getAllOrders,updateOrderStatus}
+    // Validate condition checks
+    if (typeof allItemsReceived !== 'boolean' || typeof itemsInGoodCondition !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Please verify both condition checks'
+      });
+    }
+
+    const order = await Order.findOneAndUpdate(
+      { 
+        _id: orderId,
+        user: userId,
+        status: 'delivered',
+        'receivedConfirmation.confirmed': false
+      },
+      {
+        $set: {
+          'receivedConfirmation.confirmed': true,
+          'receivedConfirmation.confirmedAt': new Date(),
+          'receivedConfirmation.confirmationNote': note || '',
+          'receivedConfirmation.conditionChecks': {
+            allItemsReceived,
+            itemsInGoodCondition
+          },
+          status: 'received'
+        }
+      },
+      { new: true }
+    ).populate('user', 'name email');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found, already confirmed, or not eligible for confirmation'
+      });
+    }
+
+    // Notify admin (you can implement your preferred notification system)
+    notifyAdmin({
+      orderId: order._id,
+      customerName: order.user.name,
+      customerEmail: order.user.email,
+      confirmationTime: new Date(),
+      note: note,
+      conditionChecks: {
+        allItemsReceived,
+        itemsInGoodCondition
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Order receipt confirmed successfully',
+      order: {
+        _id: order._id,
+        status: order.status,
+        receivedConfirmation: order.receivedConfirmation
+      }
+    });
+
+  } catch (error) {
+    console.error('Error confirming order receipt:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm order receipt',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Helper function (implement according to your notification system)
+const notifyAdmin = (confirmationData) => {
+  // Example: Send email or push notification to admin
+  console.log('Admin notification:', confirmationData);
+  // Implement your actual notification logic here
+};
+
+export { createOrder,getOrderTracking, getUserOrders,getAllOrders,updateOrderStatus,confirmOrderReceived}
 

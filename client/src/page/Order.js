@@ -11,6 +11,9 @@ function OrderConfirmation() {
   const [error, setError] = useState(null);
   const [trackingData, setTrackingData] = useState({});
   const [loadingOrders, setLoadingOrders] = useState({});
+  const [confirmationNote, setConfirmationNote] = useState('');
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState(null);
 
   useEffect(() => {
     const fetchUserOrders = async () => {
@@ -83,6 +86,41 @@ function OrderConfirmation() {
     }
   };
 
+  const handleConfirmReceived = async () => {
+    if (!currentOrderId) return;
+
+    try {
+      const response = await axios.put(
+        `https://ecommerce-rho-hazel.vercel.app/api/orders/confirm-received/${currentOrderId}`,
+        { note: confirmationNote },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        setOrders(prev => prev.map(order => 
+          order._id === currentOrderId ? {
+            ...order,
+            receivedConfirmation: {
+              confirmed: true,
+              confirmedAt: new Date().toISOString(),
+              confirmationNote: confirmationNote
+            }
+          } : order
+        ));
+        toast.success('Thank you for confirming receipt of your order!');
+        setShowConfirmationModal(false);
+        setConfirmationNote('');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to confirm receipt');
+    }
+  };
+
   const getStatusColor = (status) => {
     if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
@@ -90,6 +128,7 @@ function OrderConfirmation() {
       case 'processing': return 'bg-blue-100 text-blue-800';
       case 'shipped': return 'bg-purple-100 text-purple-800';
       case 'delivered': return 'bg-green-100 text-green-800';
+      case 'received': return 'bg-green-200 text-green-900';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -118,6 +157,56 @@ function OrderConfirmation() {
     <div className="max-w-7xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Your Orders</h1>
 
+      {/* Confirmation Modal */}
+      {showConfirmationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Confirm Product Received</h3>
+            <p className="mb-4">Please confirm that you have physically received and checked your products.</p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Condition Check:</label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 mr-2" />
+                  <span>All items received</span>
+                </label>
+                <label className="flex items-center">
+                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 mr-2" />
+                  <span>Items in good condition</span>
+                </label>
+              </div>
+            </div>
+
+            <textarea
+              placeholder="Optional: Add any notes about the received products..."
+              className="w-full p-2 border border-gray-300 rounded-md mb-4"
+              rows={3}
+              value={confirmationNote}
+              onChange={(e) => setConfirmationNote(e.target.value)}
+            />
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowConfirmationModal(false);
+                  setConfirmationNote('');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmReceived}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                Confirm Receipt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-8">
         {orders.map((order) => {
           const orderDate = new Date(order.createdAt).toLocaleString('en-US', {
@@ -134,6 +223,9 @@ function OrderConfirmation() {
                   </h2>
                   <p className="text-sm text-gray-600">Placed on {orderDate}</p>
                 </div>
+                <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(order.status)}`}>
+                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                </span>
               </div>
 
               {/* Order Items */}
@@ -178,9 +270,9 @@ function OrderConfirmation() {
                 ))}
               </div>
 
-              {/* Order Summary and Tracking */}
+              {/* Order Summary and Actions */}
               <div className="bg-gray-50 p-4 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="w-full md:w-auto">
+                <div className="w-full md:w-auto space-y-2">
                   <button
                     onClick={() => fetchTrackingInfo(order._id)}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors duration-200 w-full md:w-auto"
@@ -188,6 +280,29 @@ function OrderConfirmation() {
                   >
                     {loadingOrders[order._id] ? 'Loading...' : 'Track Order'}
                   </button>
+                  
+                  {/* Confirm Receipt Button */}
+                  {order.status === 'delivered' && !order.receivedConfirmation?.confirmed && (
+                    <button
+                      onClick={() => {
+                        setCurrentOrderId(order._id);
+                        setShowConfirmationModal(true);
+                      }}
+                      className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm transition-colors duration-200 w-full md:w-auto"
+                    >
+                      Confirm Product Received
+                    </button>
+                  )}
+
+                  {/* Receipt Confirmation Status */}
+                  {order.receivedConfirmation?.confirmed && (
+                    <div className="p-2 bg-green-50 text-green-800 rounded-md text-sm">
+                      <p>✓ Confirmed received on {new Date(order.receivedConfirmation.confirmedAt).toLocaleString()}</p>
+                      {order.receivedConfirmation.confirmationNote && (
+                        <p className="mt-1">Note: {order.receivedConfirmation.confirmationNote}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="w-full md:w-auto">
@@ -195,7 +310,6 @@ function OrderConfirmation() {
                   {trackingData[order._id] && (
                     <div className="mt-2 p-3 bg-white rounded-md border">
                       <div className="flex flex-col space-y-2">
-                        {/* Current Status Section - Always shown */}
                         <div className="flex items-center justify-between">
                           <span className="text-gray-600">Current Status:</span>
                           <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
@@ -203,8 +317,7 @@ function OrderConfirmation() {
                           </span>
                         </div>
 
-                        {/* Tracking Info Section - Only shown if status is shipped or delivered */}
-                        {(order.status === 'shipped' || order.status === 'delivered') ? (
+                        {(order.status === 'shipped' || order.status === 'delivered') && (
                           <>
                             <div className="flex items-center justify-between">
                               <span className="text-gray-600">Carrier:</span>
@@ -223,10 +336,6 @@ function OrderConfirmation() {
                               </span>
                             </div>
                           </>
-                        ) : (
-                          <div className="text-gray-500 text-sm">
-                            Tracking information will be available once your order is shipped
-                          </div>
                         )}
                       </div>
                     </div>
