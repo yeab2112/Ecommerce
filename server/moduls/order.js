@@ -92,6 +92,13 @@ const orderSchema = new mongoose.Schema({
     carrier: String,
     trackingNumber: String,
     updatedAt: Date
+  },
+  receivedConfirmation: {
+    confirmed: { type: Boolean, default: false },
+    confirmedAt: Date,
+    note: String,
+    allItemsReceived: Boolean,
+    itemsInGoodCondition: Boolean
   }
 }, { timestamps: true });
 
