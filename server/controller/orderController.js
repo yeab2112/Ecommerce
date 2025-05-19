@@ -256,19 +256,12 @@ const confirmOrderReceived = async (req, res) => {
     const orderId = req.params.id;
     const userId = req.user._id;
 
-    // Validate condition checks
     if (typeof allItemsReceived !== 'boolean' || typeof itemsInGoodCondition !== 'boolean') {
       return res.status(400).json({
         success: false,
         message: 'Please verify both condition checks'
       });
     }
-console.log('Finding order with:', {
-  _id: orderId,
-  user: userId,
-  status: 'delivered',
-  confirmed: false
-});
 
     const order = await Order.findOneAndUpdate(
       {
@@ -286,7 +279,6 @@ console.log('Finding order with:', {
           'receivedConfirmation.itemsInGoodCondition': itemsInGoodCondition,
           status: 'received'
         }
-
       },
       { new: true }
     ).populate('user', 'name email');
@@ -298,17 +290,14 @@ console.log('Finding order with:', {
       });
     }
 
-    // Notify admin (you can implement your preferred notification system)
+    // Notify admin
     notifyAdmin({
       orderId: order._id,
       customerName: order.user.name,
       customerEmail: order.user.email,
       confirmationTime: new Date(),
       note: note,
-      conditionChecks: {
-        allItemsReceived,
-        itemsInGoodCondition
-      }
+      conditionChecks: { allItemsReceived, itemsInGoodCondition }
     });
 
     res.json({
@@ -331,11 +320,10 @@ console.log('Finding order with:', {
   }
 };
 
-// Helper function (implement according to your notification system)
 const notifyAdmin = (confirmationData) => {
-  // Example: Send email or push notification to admin
+  // Implementation depends on your notification system
   console.log('Admin notification:', confirmationData);
-  // Implement your actual notification logic here
+  // Example: Send email/SMS/webhook to admin dashboard
 };
 
 export { createOrder, getOrderTracking, getUserOrders, getAllOrders, updateOrderStatus, confirmOrderReceived }

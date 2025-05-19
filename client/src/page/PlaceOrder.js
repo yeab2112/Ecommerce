@@ -1,59 +1,92 @@
-import React, { useState, useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { ShopContext } from "../context/ShopContext";
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-function PlaceOrder() {
-  const { cart, currency, delivery_fee, navigate, token, setCart } = useContext(ShopContext);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+function OrderConfirmation() {
+  const { currency, navigate, token } = useContext(ShopContext);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [trackingData, setTrackingData] = useState({});
+  const [loadingOrders, setLoadingOrders] = useState({});
+  const [confirmationNote, setConfirmationNote] = useState('');
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState(null);
+  const [allItemsReceived, setAllItemsReceived] = useState(false);
+  const [itemsInGoodCondition, setItemsInGoodCondition] = useState(false);
 
-  const [deliveryInfo, setDeliveryInfo] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: '',
-    phone: '',
-  });
+  useEffect(() => {
+    const fetchUserOrders = async () => {
+      if (!token) {
+        navigate('/login');
+        return;
+      }
 
-  const [paymentMethod, setPaymentMethod] = useState('');
+      try {
+        const response = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/orders/user', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setDeliveryInfo({ ...deliveryInfo, [name]: value });
-  };
+        if (response.data.success && response.data.orders?.length > 0) {
+          setOrders(response.data.orders);
+        } else {
+          setError('No orders found');
+          toast.info('No orders found');
+        }
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        setError(err.response?.data?.message || err.message);
+        toast.error('Failed to load order details');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleColorChange = (index, color) => {
-    const updatedCart = [...cart];
-    updatedCart[index].color = color;
-    setCart(updatedCart);
-  };
+    fetchUserOrders();
+  }, [token, navigate]);
 
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const finalTotal = totalPrice + delivery_fee;
+  const fetchTrackingInfo = async (orderId) => {
+    if (!token) {
+      navigate('/login');
+      return;
+    }
 
-  const colorOptions = ['Red', 'Blue', 'Black', 'White', 'Green'];
+    setLoadingOrders(prev => ({ ...prev, [orderId]: true }));
 
-  const initiateChapaPayment = async (orderId) => {
-    setIsProcessingPayment(true);
     try {
-      const response = await axios.post(
-        'https://ecommerce-rho-hazel.vercel.app/api/payment/chapa',
+      const response = await axios.get(
+        `https://ecommerce-rho-hazel.vercel.app/api/orders/${orderId}/tracking`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        setTrackingData(prev => ({
+          ...prev,
+          [orderId]: response.data
+        }));
+      } else {
+        toast.error(response.data.message || 'Failed to fetch tracking information');
+      }
+    } catch (err) {
+      console.error('Error fetching tracking info:', err);
+      toast.error(err.response?.data?.message || 'Failed to load tracking information');
+    } finally {
+      setLoadingOrders(prev => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const handleConfirmReceived = async () => {
+    if (!currentOrderId) return;
+
+    try {
+      const response = await axios.put(
+        `https://ecommerce-rho-hazel.vercel.app/api/orders/confirm-received/${currentOrderId}`,
         {
-          amount: finalTotal,
-          currency: 'ETB',
-          email: deliveryInfo.email,
-          first_name: deliveryInfo.firstName,
-          last_name: deliveryInfo.lastName,
-          tx_ref: orderId,
-          callback_url: `${window.location.origin}/order-confirmation/${orderId}`,
-          return_url: `${window.location.origin}/order-confirmation/${orderId}`,
-          meta: { orderId }
+          note: confirmationNote,
+          allItemsReceived,
+          itemsInGoodCondition
         },
         {
           headers: {
@@ -63,215 +96,277 @@ function PlaceOrder() {
         }
       );
 
-      if (response.data.url) {
-        window.location.href = response.data.url;
-      } else {
-        throw new Error('Payment initiation failed');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast.error(error.response?.data?.message || 'Payment initiation failed');
-      setIsProcessingPayment(false);
-    }
-  };
-
-  const handleOrderConfirmation = async () => {
-    if (!paymentMethod) {
-      toast.error("Please select a payment method.");
-      return;
-    }
-
-    if (!token) {
-      toast.error("Please login to place an order.");
-      navigate('/login');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const orderData = {
-        deliveryInfo,
-        paymentMethod,
-        items: cart.map(item => ({
-          product: item._id,
-          size: item.size,
-          color: item.color || 'default',
-          quantity: item.quantity,
-          price: item.price,
-          name: item.name,
-          image: item.image
-        })),
-        subtotal: totalPrice,
-        deliveryFee: delivery_fee,
-        total: finalTotal,
-        status: paymentMethod === 'Cash on Delivery' ? 'pending' : 'payment_pending'
-      };
-
-      const response = await axios.post(
-        'https://ecommerce-rho-hazel.vercel.app/api/orders',
-        orderData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
       if (response.data.success) {
-        if (paymentMethod === 'Cash on Delivery') {
-          toast.success('Order placed successfully!');
-          navigate('/order-confirmation', {
-            state: {
-              orderId: response.data.order._id,
-              orderDetails: response.data.order
-            }
-          });
-          setCart([]);
-        } else if (paymentMethod === 'Online Payment') {
-          await initiateChapaPayment(response.data.order._id);
-        }
-      } else {
-        throw new Error(response.data.message || 'Failed to place order');
+        setOrders(prev => prev.map(order =>
+          order._id === currentOrderId ? {
+            ...order,
+            receivedConfirmation: {
+              confirmed: true,
+              confirmedAt: new Date().toISOString(),
+              note: confirmationNote,
+              allItemsReceived,
+              itemsInGoodCondition
+            },
+            status: 'received'
+          } : order
+        ));
+        toast.success('Order receipt confirmed successfully!');
+        setShowConfirmationModal(false);
+        setConfirmationNote('');
+        setAllItemsReceived(false);
+        setItemsInGoodCondition(false);
       }
-    } catch (error) {
-      console.error('Order placement error:', error);
-      toast.error(error.response?.data?.message || 'Failed to place order');
-    } finally {
-      if (paymentMethod !== 'Online Payment') {
-        setIsSubmitting(false);
-      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to confirm receipt');
     }
   };
+
+  const getStatusColor = (status) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    switch (status.toLowerCase()) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'processing': return 'bg-blue-100 text-blue-800';
+      case 'shipped': return 'bg-purple-100 text-purple-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
+      case 'received': return 'bg-green-200 text-green-900';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return <div className="max-w-6xl mx-auto p-6 text-center"><h2 className="text-xl">Loading order details...</h2></div>;
+  }
+
+  if (error || orders.length === 0) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 text-center">
+        <h2 className="text-xl text-gray-700">No orders found</h2>
+        <p className="text-gray-500 mt-2">You haven't placed any orders yet.</p>
+        <button
+          onClick={() => navigate('/')}
+          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+        >
+          Return to Home
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white shadow-lg rounded-md">
-      <h1 className="text-2xl font-bold mb-4 text-center">Place Your Order</h1>
+    <div className="max-w-7xl mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">Your Orders</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Delivery Info */}
-        <div className="p-4 border rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Delivery Information</h2>
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <input type="text" name="firstName" placeholder="First Name" value={deliveryInfo.firstName} onChange={handleInputChange} className="border p-2 w-full rounded-md" required />
-              <input type="text" name="lastName" placeholder="Last Name" value={deliveryInfo.lastName} onChange={handleInputChange} className="border p-2 w-full rounded-md" required />
+      {showConfirmationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Confirm Product Received</h3>
+            <p className="mb-4">Please confirm that you have physically received and checked your products.</p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Condition Check:</label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    checked={allItemsReceived}
+                    onChange={(e) => setAllItemsReceived(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 mr-2"
+                  />
+                  <span>All items received</span>
+                </label>
+                <label className="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    checked={itemsInGoodCondition}
+                    onChange={(e) => setItemsInGoodCondition(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 mr-2"
+                  />
+                  <span>Items in good condition</span>
+                </label>
+              </div>
             </div>
-            <input type="email" name="email" placeholder="Email" value={deliveryInfo.email} onChange={handleInputChange} className="border p-2 w-full rounded-md" required />
-            <input type="text" name="address" placeholder="Street Address" value={deliveryInfo.address} onChange={handleInputChange} className="border p-2 w-full rounded-md" required />
-            <div className="flex gap-4">
-              <input type="text" name="city" placeholder="City" value={deliveryInfo.city} onChange={handleInputChange} className="border p-2 w-full rounded-md" required />
-              <input type="text" name="state" placeholder="State" value={deliveryInfo.state} onChange={handleInputChange} className="border p-2 w-full rounded-md" required />
+
+            <textarea
+              placeholder="Optional: Add any notes about the received products..."
+              className="w-full p-2 border border-gray-300 rounded-md mb-4"
+              rows={3}
+              value={confirmationNote}
+              onChange={(e) => setConfirmationNote(e.target.value)}
+            />
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowConfirmationModal(false);
+                  setConfirmationNote('');
+                  setAllItemsReceived(false);
+                  setItemsInGoodCondition(false);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmReceived}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                Confirm Receipt
+              </button>
             </div>
-            <div className="flex gap-4">
-              <input type="text" name="zipCode" placeholder="Zip Code" value={deliveryInfo.zipCode} onChange={handleInputChange} className="border p-2 w-full rounded-md" required />
-              <input type="text" name="country" placeholder="Country" value={deliveryInfo.country} onChange={handleInputChange} className="border p-2 w-full rounded-md" required />
-            </div>
-            <input type="tel" name="phone" placeholder="Phone Number" value={deliveryInfo.phone} onChange={handleInputChange} className="border p-2 w-full rounded-md" required />
           </div>
         </div>
+      )}
 
-        {/* Order Summary */}
-        <div className="p-4 border rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+      <div className="space-y-8">
+        {orders.map((order) => {
+          const orderDate = new Date(order.createdAt).toLocaleString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
 
-          <div className="space-y-4 mb-6">
-            {cart.map((item, index) => (
-              <div key={index} className="border-b pb-4">
-                <div className="flex justify-between text-sm">
-                  <span>{item.name} (Size: {item.size}, Qty: {item.quantity})</span>
-                  <span>{currency}{(item.price * item.quantity).toFixed(2)}</span>
+          return (
+            <div key={order._id} className="border rounded-lg overflow-hidden shadow-sm">
+              <div className="bg-gray-50 p-4 border-b flex justify-between items-center">
+                <div>
+                  <h2 className="font-semibold">
+                    Order #{order.orderNumber || order._id.slice(-8).toUpperCase()}
+                  </h2>
+                  <p className="text-sm text-gray-600">Placed on {orderDate}</p>
                 </div>
-                <div className="mt-2">
-                  <p className="text-sm font-medium mb-1">Select Color:</p>
-                  <div className="flex gap-2">
-                    {colorOptions.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => handleColorChange(index, color)}
-                        className={`w-6 h-6 rounded-full border transition-all duration-150 ${
-                          item.color === color ? 'ring-2 ring-blue-500 scale-110' : ''
-                        }`}
-                        style={{ backgroundColor: color.toLowerCase() }}
-                        title={color}
+                <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(order.status)}`}>
+                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                </span>
+              </div>
+
+              <div className="divide-y">
+                {order.items.map((item, index) => (
+                  <div key={index} className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center">
+                      <img
+                        className="w-20 h-20 object-contain"
+                        src={item.image || '/placeholder-product.jpg'}
+                        alt={item.name}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/placeholder-product.jpg';
+                        }}
                       />
-                    ))}
+                      <div className="ml-4">
+                        <h3 className="font-medium">{item.name}</h3>
+                        <p className="text-sm text-gray-600">Size: {item.size}</p>
+                        {item.color && (
+                          <div className="flex items-center mt-1">
+                            <span className="text-sm text-gray-600 mr-2">Color:</span>
+                            <div 
+                              className="w-4 h-4 rounded-full border border-gray-300"
+                              style={{ backgroundColor: item.color.toLowerCase() }}
+                              title={item.color}
+                            />
+                            <span className="text-sm text-gray-600 ml-1">{item.color}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center md:justify-center">
+                      <p className="text-gray-600">Quantity: {item.quantity}</p>
+                    </div>
+
+                    <div className="flex items-center justify-end">
+                      <p className="font-medium">{currency}{item.price.toFixed(2)}</p>
+                    </div>
                   </div>
-                  {item.color && (
-                    <p className="text-xs mt-1 text-gray-600">Selected: <strong>{item.color}</strong></p>
+                ))}
+              </div>
+
+              <div className="bg-gray-50 p-4 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="w-full md:w-auto space-y-2">
+                  <button
+                    onClick={() => fetchTrackingInfo(order._id)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors duration-200 w-full md:w-auto"
+                    disabled={loadingOrders[order._id]}
+                  >
+                    {loadingOrders[order._id] ? 'Loading...' : 'Track Order'}
+                  </button>
+                  
+                  {order.status === 'delivered' && !order.receivedConfirmation?.confirmed && (
+                    <button
+                      onClick={() => {
+                        setCurrentOrderId(order._id);
+                        setShowConfirmationModal(true);
+                      }}
+                      className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm transition-colors duration-200 w-full md:w-auto"
+                    >
+                      Confirm Product Received
+                    </button>
+                  )}
+
+                  {order.receivedConfirmation?.confirmed && (
+                    <div className="p-2 bg-green-50 text-green-800 rounded-md text-sm">
+                      <p>✓ Confirmed received on {new Date(order.receivedConfirmation.confirmedAt).toLocaleString()}</p>
+                      {order.receivedConfirmation.note && (
+                        <p className="mt-1">Note: {order.receivedConfirmation.note}</p>
+                      )}
+                      <p className="mt-1">
+                        Condition: {order.receivedConfirmation.allItemsReceived ? 'All items received' : 'Missing items'}, 
+                        {order.receivedConfirmation.itemsInGoodCondition ? ' good condition' : ' damaged'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="w-full md:w-auto">
+                  <p className="text-lg font-medium text-right">Total: {currency}{order.total.toFixed(2)}</p>
+                  {trackingData[order._id] && (
+                    <div className="mt-2 p-3 bg-white rounded-md border">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Current Status:</span>
+                          <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          </span>
+                        </div>
+
+                        {(order.status === 'shipped' || order.status === 'delivered') && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Carrier:</span>
+                              <span>{trackingData[order._id].trackingInfo?.carrier || 'Not specified'}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Tracking #:</span>
+                              <span>{trackingData[order._id].trackingInfo?.trackingNumber || 'Not available'}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Last Update:</span>
+                              <span>
+                                {trackingData[order._id].trackingInfo?.updatedAt ?
+                                  new Date(trackingData[order._id].trackingInfo.updatedAt).toLocaleString() :
+                                  'Not available'}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="flex justify-between font-semibold text-base">
-            <span>Subtotal</span>
-            <span>{currency}{totalPrice.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-base">
-            <span>Delivery Fee</span>
-            <span>{currency}{delivery_fee.toFixed(2)}</span>
-          </div>
-          <hr className="my-2" />
-          <div className="flex justify-between font-semibold text-xl">
-            <span>Total</span>
-            <span>{currency}{finalTotal.toFixed(2)}</span>
-          </div>
-
-          {/* Payment Method */}
-          <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-2">Select Payment Method</h2>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={() => setPaymentMethod('Cash on Delivery')}
-                className={`w-full sm:w-1/2 p-2 text-sm rounded-md text-white ${
-                  paymentMethod === 'Cash on Delivery' ? 'bg-green-600' : 'bg-gray-500'
-                }`}
-              >
-                Cash on Delivery
-              </button>
-              <button
-                onClick={() => setPaymentMethod('Online Payment')}
-                className={`w-full sm:w-1/2 p-2 text-sm rounded-md text-white ${
-                  paymentMethod === 'Online Payment' ? 'bg-green-600' : 'bg-gray-500'
-                }`}
-              >
-                Online Payment
-              </button>
             </div>
-            {paymentMethod === 'Online Payment' && (
-              <p className="mt-2 text-sm text-gray-600">You will be redirected to Chapa for secure payment.</p>
-            )}
-          </div>
+          );
+        })}
+      </div>
 
-          {/* Confirm Buttons */}
-          <div className="flex flex-col sm:flex-row justify-between gap-4 mt-6">
-            <button
-              onClick={() => navigate('/cart')}
-              className="bg-gray-500 text-white py-2 px-4 rounded-md w-full sm:w-1/2"
-            >
-              Go Back
-            </button>
-            <button
-              onClick={handleOrderConfirmation}
-              disabled={isSubmitting || isProcessingPayment}
-              className={`bg-blue-600 text-white py-2 px-4 rounded-md w-full sm:w-1/2 ${
-                isSubmitting || isProcessingPayment ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {isProcessingPayment
-                ? 'Redirecting to Payment...'
-                : isSubmitting
-                ? 'Processing...'
-                : 'Confirm Order'}
-            </button>
-          </div>
-        </div>
+      <div className="mt-8 text-center">
+        <button
+          onClick={() => navigate('/')}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors duration-200"
+        >
+          Continue Shopping
+        </button>
       </div>
     </div>
   );
 }
 
-export default PlaceOrder;
+export default OrderConfirmation;
