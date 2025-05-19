@@ -87,39 +87,43 @@ function OrderConfirmation() {
   };
 
   const handleConfirmReceived = async () => {
-    if (!currentOrderId) return;
+  if (!currentOrderId) return;
 
-    try {
-      const response = await axios.put(
-        `https://ecommerce-rho-hazel.vercel.app/api/orders/confirm-received/${currentOrderId}`,
-        { note: confirmationNote },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+  try {
+    const response = await axios.put(
+      `https://ecommerce-rho-hazel.vercel.app/api/orders/confirm-received/${currentOrderId}`,
+      {
+        note: confirmationNote,
+        allItemsReceived: true, // or false, depending on checkbox/input
+        itemsInGoodCondition: true // or false
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
-
-      if (response.data.success) {
-        setOrders(prev => prev.map(order => 
-          order._id === currentOrderId ? {
-            ...order,
-            receivedConfirmation: {
-              confirmed: true,
-              confirmedAt: new Date().toISOString(),
-              confirmationNote: confirmationNote
-            }
-          } : order
-        ));
-        toast.success('Thank you for confirming receipt of your order!');
-        setShowConfirmationModal(false);
-        setConfirmationNote('');
       }
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to confirm receipt');
+    );
+
+    if (response.data.success) {
+      setOrders(prev => prev.map(order =>
+        order._id === currentOrderId ? {
+          ...order,
+          receivedConfirmation: {
+            confirmed: true,
+            confirmedAt: new Date().toISOString(),
+            note: confirmationNote
+          }
+        } : order
+      ));
+      toast.success('Thank you for confirming receipt of your order!');
+      setShowConfirmationModal(false);
+      setConfirmationNote('');
     }
-  };
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Failed to confirm receipt');
+  }
+};
 
   const getStatusColor = (status) => {
     if (!status) return 'bg-gray-100 text-gray-800';

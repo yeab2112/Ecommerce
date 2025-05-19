@@ -263,6 +263,12 @@ const confirmOrderReceived = async (req, res) => {
         message: 'Please verify both condition checks'
       });
     }
+console.log('Finding order with:', {
+  _id: orderId,
+  user: userId,
+  status: 'delivered',
+  confirmed: false
+});
 
     const order = await Order.findOneAndUpdate(
       {
