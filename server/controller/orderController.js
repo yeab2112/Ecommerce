@@ -256,13 +256,55 @@ const confirmOrderReceived = async (req, res) => {
     const orderId = req.params.id;
     const userId = req.user._id;
 
+    // Check that both booleans are passed correctly
     if (typeof allItemsReceived !== 'boolean' || typeof itemsInGoodCondition !== 'boolean') {
       return res.status(400).json({
         success: false,
-        message: 'Please verify both condition checks'
+        message: 'Please verify both condition checks',
+        debug: {
+          allItemsReceived,
+          itemsInGoodCondition
+        }
       });
     }
 
+    // Debug checks before updating
+    const orderCheck = await Order.findById(orderId);
+
+    if (!orderCheck) {
+      return res.status(404).json({
+        success: false,
+        debug: 'Order not found by ID',
+        orderId
+      });
+    }
+
+    if (orderCheck.user.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        debug: 'User mismatch',
+        userId,
+        orderUserId: orderCheck.user
+      });
+    }
+
+    if (orderCheck.status !== 'delivered') {
+      return res.status(400).json({
+        success: false,
+        debug: 'Order not delivered yet',
+        currentStatus: orderCheck.status
+      });
+    }
+
+    if (orderCheck.receivedConfirmation?.confirmed) {
+      return res.status(400).json({
+        success: false,
+        debug: 'Order already confirmed',
+        confirmed: true
+      });
+    }
+
+    // Perform the update
     const order = await Order.findOneAndUpdate(
       {
         _id: orderId,
@@ -286,7 +328,11 @@ const confirmOrderReceived = async (req, res) => {
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found, already confirmed, or not eligible for confirmation'
+        message: 'Order not found, already confirmed, or not eligible for confirmation',
+        debug: {
+          orderId,
+          userId
+        }
       });
     }
 
@@ -321,9 +367,8 @@ const confirmOrderReceived = async (req, res) => {
 };
 
 const notifyAdmin = (confirmationData) => {
-  // Implementation depends on your notification system
   console.log('Admin notification:', confirmationData);
-  // Example: Send email/SMS/webhook to admin dashboard
+  // Optional: send an email or dashboard notification here
 };
 
 export { createOrder, getOrderTracking, getUserOrders, getAllOrders, updateOrderStatus, confirmOrderReceived }
