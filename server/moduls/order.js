@@ -78,28 +78,25 @@ const orderSchema = new mongoose.Schema({
   subtotal: { type: Number, required: true, min: 0 },
   deliveryFee: { type: Number, required: true, min: 0 },
   total: { type: Number, required: true, min: 0 },
-  status: {
-    type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
-    default: 'pending'
-  },
-  receivedConfirmation: {
-    confirmed: { type: Boolean, default: false },
-    confirmedAt: Date,
-    confirmationNote: String
-  },
+ status: {
+  type: String,
+  enum: ['pending', 'processing', 'shipped', 'delivered', 'received', 'cancelled'],
+  default: 'pending'
+}
+,
   tracking: {
     carrier: String,
     trackingNumber: String,
     updatedAt: Date
   },
-  receivedConfirmation: {
-    confirmed: { type: Boolean, default: false },
-    confirmedAt: Date,
-    note: String,
-    allItemsReceived: Boolean,
-    itemsInGoodCondition: Boolean
-  }
+ receivedConfirmation: {
+  confirmed: { type: Boolean, default: false },
+  confirmedAt: Date,
+  note: String,
+  allItemsReceived: Boolean,
+  itemsInGoodCondition: Boolean
+}
+
 }, { timestamps: true });
 
 const Order = mongoose.model('Order', orderSchema);

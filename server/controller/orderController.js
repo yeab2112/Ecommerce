@@ -1,5 +1,5 @@
-import  Order  from "../moduls/order.js";
-import  UserModel  from "../moduls/user.js";
+import Order from "../moduls/order.js";
+import UserModel from "../moduls/user.js";
 // Create a new order
 const createOrder = async (req, res) => {
   try {
@@ -22,7 +22,7 @@ const createOrder = async (req, res) => {
           message: 'Invalid item data in order'
         });
       }
-      
+
       // Add default color if not provided
       if (!item.color) {
         item.color = 'default';
@@ -67,7 +67,7 @@ const createOrder = async (req, res) => {
     // Update user with saved order id and clear cart
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,
-      { 
+      {
         $push: { orders: savedOrder._id },
         $set: { cartdata: {} }
       },
@@ -107,15 +107,15 @@ const getUserOrders = async (req, res) => {
       .lean();
 
     if (!orders.length) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'No orders found' 
+        message: 'No orders found'
       });
     }
 
-    res.json({ 
+    res.json({
       success: true,
-      orders 
+      orders
     });
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -150,8 +150,8 @@ const getOrderTracking = async (req, res) => {
       responseData.trackingInfo = {
         carrier: order.tracking.carrier || 'Not specified',
         trackingNumber: order.tracking.trackingNumber || 'Not available',
-        updatedAt: order.tracking.updatedAt 
-          ? order.tracking.updatedAt.toISOString() 
+        updatedAt: order.tracking.updatedAt
+          ? order.tracking.updatedAt.toISOString()
           : order.updatedAt.toISOString()
       };
     }
@@ -173,15 +173,15 @@ const getAllOrders = async (req, res) => {
       .sort({ createdAt: -1 });
 
     if (!orders.length) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'No orders found' 
+        message: 'No orders found'
       });
     }
 
-    res.json({ 
+    res.json({
       success: true,
-      orders 
+      orders
     });
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -206,7 +206,7 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    const updateData = { 
+    const updateData = {
       status,
       updatedAt: new Date()
     };
@@ -265,7 +265,7 @@ const confirmOrderReceived = async (req, res) => {
     }
 
     const order = await Order.findOneAndUpdate(
-      { 
+      {
         _id: orderId,
         user: userId,
         status: 'delivered',
@@ -275,13 +275,12 @@ const confirmOrderReceived = async (req, res) => {
         $set: {
           'receivedConfirmation.confirmed': true,
           'receivedConfirmation.confirmedAt': new Date(),
-          'receivedConfirmation.confirmationNote': note || '',
-          'receivedConfirmation.conditionChecks': {
-            allItemsReceived,
-            itemsInGoodCondition
-          },
+          'receivedConfirmation.note': note || '',
+          'receivedConfirmation.allItemsReceived': allItemsReceived,
+          'receivedConfirmation.itemsInGoodCondition': itemsInGoodCondition,
           status: 'received'
         }
+
       },
       { new: true }
     ).populate('user', 'name email');
@@ -333,5 +332,5 @@ const notifyAdmin = (confirmationData) => {
   // Implement your actual notification logic here
 };
 
-export { createOrder,getOrderTracking, getUserOrders,getAllOrders,updateOrderStatus,confirmOrderReceived}
+export { createOrder, getOrderTracking, getUserOrders, getAllOrders, updateOrderStatus, confirmOrderReceived }
 
