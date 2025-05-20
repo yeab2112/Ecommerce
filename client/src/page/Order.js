@@ -14,6 +14,8 @@ function OrderConfirmation() {
   const [confirmationNote, setConfirmationNote] = useState('');
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState(null);
+  const [allItemsReceived, setAllItemsReceived] = useState(false);
+  const [itemsInGoodCondition, setItemsInGoodCondition] = useState(false);
 
   useEffect(() => {
     const fetchUserOrders = async () => {
@@ -86,7 +88,7 @@ function OrderConfirmation() {
     }
   };
 
-  const handleConfirmReceived = async () => {
+ const handleConfirmReceived = async () => {
   if (!currentOrderId) return;
 
   try {
@@ -94,8 +96,8 @@ function OrderConfirmation() {
       `https://ecommerce-rho-hazel.vercel.app/api/orders/confirm-received/${currentOrderId}`,
       {
         note: confirmationNote,
-        allItemsReceived: true, // or false, depending on checkbox/input
-        itemsInGoodCondition: true // or false
+        allItemsReceived,
+        itemsInGoodCondition
       },
       {
         headers: {
@@ -109,19 +111,25 @@ function OrderConfirmation() {
       setOrders(prev => prev.map(order =>
         order._id === currentOrderId ? {
           ...order,
+          status: 'received', // Make sure to update the status
           receivedConfirmation: {
             confirmed: true,
             confirmedAt: new Date().toISOString(),
-            note: confirmationNote
+            note: confirmationNote,
+            allItemsReceived,
+            itemsInGoodCondition
           }
         } : order
       ));
       toast.success('Thank you for confirming receipt of your order!');
       setShowConfirmationModal(false);
       setConfirmationNote('');
+      setAllItemsReceived(false);
+      setItemsInGoodCondition(false);
     }
   } catch (err) {
     toast.error(err.response?.data?.message || 'Failed to confirm receipt');
+    console.error('Confirmation error:', err.response?.data?.debug); // Log debug info
   }
 };
 
@@ -161,22 +169,31 @@ function OrderConfirmation() {
     <div className="max-w-7xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Your Orders</h1>
 
-      {/* Confirmation Modal */}
       {showConfirmationModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
             <h3 className="text-lg font-bold mb-4">Confirm Product Received</h3>
             <p className="mb-4">Please confirm that you have physically received and checked your products.</p>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">Condition Check:</label>
               <div className="space-y-2">
                 <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 mr-2" />
+                  <input
+                    type="checkbox"
+                    checked={allItemsReceived}
+                    onChange={(e) => setAllItemsReceived(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 mr-2"
+                  />
                   <span>All items received</span>
                 </label>
                 <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 mr-2" />
+                  <input
+                    type="checkbox"
+                    checked={itemsInGoodCondition}
+                    onChange={(e) => setItemsInGoodCondition(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 mr-2"
+                  />
                   <span>Items in good condition</span>
                 </label>
               </div>
@@ -189,12 +206,14 @@ function OrderConfirmation() {
               value={confirmationNote}
               onChange={(e) => setConfirmationNote(e.target.value)}
             />
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => {
                   setShowConfirmationModal(false);
                   setConfirmationNote('');
+                  setAllItemsReceived(false);
+                  setItemsInGoodCondition(false);
                 }}
                 className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
               >
@@ -211,6 +230,7 @@ function OrderConfirmation() {
         </div>
       )}
 
+      {/* Order Cards */}
       <div className="space-y-8">
         {orders.map((order) => {
           const orderDate = new Date(order.createdAt).toLocaleString('en-US', {
@@ -252,7 +272,7 @@ function OrderConfirmation() {
                         {item.color && (
                           <div className="flex items-center mt-1">
                             <span className="text-sm text-gray-600 mr-2">Color:</span>
-                            <div 
+                            <div
                               className="w-4 h-4 rounded-full border border-gray-300"
                               style={{ backgroundColor: item.color.toLowerCase() }}
                               title={item.color}
@@ -274,7 +294,7 @@ function OrderConfirmation() {
                 ))}
               </div>
 
-              {/* Order Summary and Actions */}
+              {/* Order Footer */}
               <div className="bg-gray-50 p-4 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="w-full md:w-auto space-y-2">
                   <button
@@ -284,8 +304,7 @@ function OrderConfirmation() {
                   >
                     {loadingOrders[order._id] ? 'Loading...' : 'Track Order'}
                   </button>
-                  
-                  {/* Confirm Receipt Button */}
+
                   {order.status === 'delivered' && !order.receivedConfirmation?.confirmed && (
                     <button
                       onClick={() => {
@@ -298,12 +317,11 @@ function OrderConfirmation() {
                     </button>
                   )}
 
-                  {/* Receipt Confirmation Status */}
                   {order.receivedConfirmation?.confirmed && (
                     <div className="p-2 bg-green-50 text-green-800 rounded-md text-sm">
                       <p>✓ Confirmed received on {new Date(order.receivedConfirmation.confirmedAt).toLocaleString()}</p>
-                      {order.receivedConfirmation.confirmationNote && (
-                        <p className="mt-1">Note: {order.receivedConfirmation.confirmationNote}</p>
+                      {order.receivedConfirmation.note && (
+                        <p className="mt-1">Note: {order.receivedConfirmation.note}</p>
                       )}
                     </div>
                   )}
@@ -320,7 +338,6 @@ function OrderConfirmation() {
                             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </span>
                         </div>
-
                         {(order.status === 'shipped' || order.status === 'delivered') && (
                           <>
                             <div className="flex items-center justify-between">

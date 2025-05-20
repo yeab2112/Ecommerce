@@ -256,112 +256,93 @@ const confirmOrderReceived = async (req, res) => {
     const orderId = req.params.id;
     const userId = req.user._id;
 
-    // Check that both booleans are passed correctly
+    // Validate input
     if (typeof allItemsReceived !== 'boolean' || typeof itemsInGoodCondition !== 'boolean') {
       return res.status(400).json({
         success: false,
-        message: 'Please verify both condition checks',
-        debug: {
-          allItemsReceived,
-          itemsInGoodCondition
-        }
+        message: 'Please verify both condition checks'
       });
     }
 
-    // Debug checks before updating
-    const orderCheck = await Order.findById(orderId);
-
-    if (!orderCheck) {
+    // Find order first to check conditions
+    const order = await Order.findById(orderId);
+    
+    if (!order) {
       return res.status(404).json({
         success: false,
-        debug: 'Order not found by ID',
-        orderId
+        message: 'Order not found'
       });
     }
 
-    if (orderCheck.user.toString() !== userId.toString()) {
+    // Check ownership
+    if (order.user.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
-        debug: 'User mismatch',
-        userId,
-        orderUserId: orderCheck.user
+        message: 'Not authorized to confirm this order'
       });
     }
 
-    if (orderCheck.status !== 'delivered') {
+    // Check status
+    if (order.status !== 'delivered') {
       return res.status(400).json({
         success: false,
-        debug: 'Order not delivered yet',
-        currentStatus: orderCheck.status
+        message: 'Order must be in delivered status to confirm receipt',
+        currentStatus: order.status
       });
     }
 
-    if (orderCheck.receivedConfirmation?.confirmed) {
+    // Check if already confirmed
+    if (order.receivedConfirmation?.confirmed) {
       return res.status(400).json({
         success: false,
-        debug: 'Order already confirmed',
-        confirmed: true
+        message: 'Order receipt already confirmed',
+        confirmedAt: order.receivedConfirmation.confirmedAt
       });
     }
 
-    // Perform the update
-    const order = await Order.findOneAndUpdate(
-      {
-        _id: orderId,
-        user: userId,
-        status: 'delivered',
-        'receivedConfirmation.confirmed': false
-      },
+    // Proceed with update
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
       {
         $set: {
-          'receivedConfirmation.confirmed': true,
-          'receivedConfirmation.confirmedAt': new Date(),
-          'receivedConfirmation.note': note || '',
-          'receivedConfirmation.allItemsReceived': allItemsReceived,
-          'receivedConfirmation.itemsInGoodCondition': itemsInGoodCondition,
+          'receivedConfirmation': {
+            confirmed: true,
+            confirmedAt: new Date(),
+            note: note || '',
+            allItemsReceived,
+            itemsInGoodCondition
+          },
           status: 'received'
         }
       },
       { new: true }
     ).populate('user', 'name email');
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found, already confirmed, or not eligible for confirmation',
-        debug: {
-          orderId,
-          userId
-        }
-      });
-    }
-
     // Notify admin
     notifyAdmin({
-      orderId: order._id,
-      customerName: order.user.name,
-      customerEmail: order.user.email,
+      orderId: updatedOrder._id,
+      customerName: updatedOrder.user.name,
+      customerEmail: updatedOrder.user.email,
       confirmationTime: new Date(),
       note: note,
       conditionChecks: { allItemsReceived, itemsInGoodCondition }
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Order receipt confirmed successfully',
       order: {
-        _id: order._id,
-        status: order.status,
-        receivedConfirmation: order.receivedConfirmation
+        _id: updatedOrder._id,
+        status: updatedOrder.status,
+        receivedConfirmation: updatedOrder.receivedConfirmation
       }
     });
 
   } catch (error) {
     console.error('Error confirming order receipt:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: 'Failed to confirm order receipt',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Internal server error'
     });
   }
 };
