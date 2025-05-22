@@ -9,6 +9,6 @@ const notificationRouter = express.Router();
  notificationRouter.get('/get-notifications', getAllNotifications);
 
 // PUT /api/notifications/mark-read
-notificationRouter.put('/mark-read', markAllAsRead);
+notificationRouter.put('/mark-all-read', markAllAsRead);
 
 export default notificationRouter;
