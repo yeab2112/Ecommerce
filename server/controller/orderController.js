@@ -1,5 +1,6 @@
 import Order from "../moduls/order.js";
 import UserModel from "../moduls/user.js";
+import { notifyAdmin } from "./notificationsController.js.js";
 // Create a new order
 const createOrder = async (req, res) => {
   try {
@@ -345,11 +346,6 @@ const confirmOrderReceived = async (req, res) => {
       message: 'Internal server error'
     });
   }
-};
-
-const notifyAdmin = (confirmationData) => {
-  console.log('Admin notification:', confirmationData);
-  // Optional: send an email or dashboard notification here
 };
 
 export { createOrder, getOrderTracking, getUserOrders, getAllOrders, updateOrderStatus, confirmOrderReceived }

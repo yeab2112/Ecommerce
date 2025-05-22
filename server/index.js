@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import cartRoutes from './router/cartRout.js';
 import orderRoutes from './router/order.js';
 import paymentRoutes from './router/paymentRoutes.js';
+import notificationRouter from './router/notificationRoutes.js';
 import morgan from 'morgan';
 
 dotenv.config();
@@ -87,6 +88,7 @@ app.use('/api/product', productRouter);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/notification', notificationRouter);
 
 // Error handling for unknown routes
 app.use((req, res, next) => {
