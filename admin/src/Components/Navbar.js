@@ -26,32 +26,32 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
   const toggleDropdown = () => setShowDropdown(!showDropdown);
 
   const fetchNotifications = async () => {
-  try {
-    const res = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/notifications/get-notifications');
-    const allNotifications = res.data;
-    
-    // Calculate unread count by filtering notifications where read is false
-    const unreadNotifications = allNotifications.filter(n => !n.read);
-    
-    setNotifications(allNotifications);
-    setUnreadCount(unreadNotifications.length);
-  } catch (err) {
-    console.error('Failed to fetch notifications:', err.message);
-    // Consider adding user feedback here (e.g., toast notification)
-  }
-};
+    try {
+      const res = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications');
+      const allNotifications = res.data;
 
- const markAllAsRead = async () => {
-  try {
-    await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notifications/mark-all-read');
-    // Optimistically update the UI before refetching
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
-  } catch (err) {
-    console.error('Failed to mark as read:', err.message);
-    // Consider adding user feedback here
-  }
-};
+      // Calculate unread count by filtering notifications where read is false
+      const unreadNotifications = allNotifications.filter(n => !n.read);
+
+      setNotifications(allNotifications);
+      setUnreadCount(unreadNotifications.length);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err.message);
+      // Consider adding user feedback here (e.g., toast notification)
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notifications/mark-all-read');
+      // Optimistically update the UI before refetching
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark as read:', err.message);
+      // Consider adding user feedback here
+    }
+  };
 
   useEffect(() => {
     fetchNotifications();
@@ -122,34 +122,34 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                       </button>
                     )}
                   </div>
-                 <ul className="space-y-2">
-  {notifications.length === 0 ? (
-    <li className="text-gray-500 dark:text-gray-400">No notifications</li>
-  ) : (
-    notifications.map((n) => (
-      <li key={n._id} className={`flex items-start space-x-2 p-2 ${!n.read ? 'bg-gray-100 dark:bg-gray-700' : ''}`}>
-        <div className="text-sm">
-          {n.message || '🔔 Notification'}
-          {n.orderId && typeof n.orderId === 'object' && (
-            <div className="text-xs text-gray-500 mt-1">
-              <p>Order ID: {n.orderId._id?.slice(-6)}</p>
-              <p>Status: {n.orderId.status}</p>
-              <p>Total: ${n.orderId.total?.toFixed(2)}</p>
-            </div>
-          )}
-          {n.orderId && typeof n.orderId === 'string' && (
-            <span className="block text-xs text-gray-500">
-              Order ID: {n.orderId.slice(-6)}
-            </span>
-          )}
-        </div>
-        {!n.read && (
-          <span className="text-xs text-red-500 ml-auto">●</span>
-        )}
-      </li>
-    ))
-  )}
-</ul>
+                  <ul className="space-y-2">
+                    {notifications.length === 0 ? (
+                      <li className="text-gray-500 dark:text-gray-400">No notifications</li>
+                    ) : (
+                      notifications.map((n) => (
+                        <li key={n._id} className={`flex items-start space-x-2 p-2 ${!n.read ? 'bg-gray-100 dark:bg-gray-700' : ''}`}>
+                          <div className="text-sm">
+                            {n.message || '🔔 Notification'}
+                            {n.orderId && typeof n.orderId === 'object' && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                <p>Order ID: {n.orderId._id?.slice(-6)}</p>
+                                <p>Status: {n.orderId.status}</p>
+                                <p>Total: ${n.orderId.total?.toFixed(2)}</p>
+                              </div>
+                            )}
+                            {n.orderId && typeof n.orderId === 'string' && (
+                              <span className="block text-xs text-gray-500">
+                                Order ID: {n.orderId.slice(-6)}
+                              </span>
+                            )}
+                          </div>
+                          {!n.read && (
+                            <span className="text-xs text-red-500 ml-auto">●</span>
+                          )}
+                        </li>
+                      ))
+                    )}
+                  </ul>
                 </div>
               </div>
             )}
