@@ -43,7 +43,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
 
   const markAllAsRead = async () => {
     try {
-      await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notifications/mark-all-read');
+      await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notification/mark-all-read');
       // Optimistically update the UI before refetching
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
