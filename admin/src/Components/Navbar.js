@@ -109,7 +109,8 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
 
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 shadow-lg rounded-md z-50 max-h-96 overflow-y-auto">
+              <div className="absolute right-0 mt-2 w-full max-w-xs sm:max-w-md lg:max-w-lg
+ bg-white dark:bg-gray-800 shadow-lg rounded-md z-50 max-h-96 overflow-y-auto">
                 <div className="p-4 text-sm text-gray-700 dark:text-gray-200">
                   <div className="flex justify-between items-center mb-2">
                     <p className="font-semibold">Recent Notifications</p>
