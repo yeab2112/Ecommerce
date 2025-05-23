@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios'; // Add axios
+import axios from 'axios';
 import { asset } from '../asset/asset';
 import { Bell } from 'lucide-react';
 
@@ -10,6 +10,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
 
   const [profileData, setProfileData] = useState({
     name: user?.name || 'Admin User',
@@ -23,33 +24,37 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
     language: 'en',
   });
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const toggleDropdown = () => setShowDropdown(!showDropdown);
 
   const fetchNotifications = async () => {
     try {
       const res = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications');
       const allNotifications = res.data;
-
-      // Calculate unread count by filtering notifications where read is false
       const unreadNotifications = allNotifications.filter(n => !n.read);
-
       setNotifications(allNotifications);
       setUnreadCount(unreadNotifications.length);
     } catch (err) {
       console.error('Failed to fetch notifications:', err.message);
-      // Consider adding user feedback here (e.g., toast notification)
     }
   };
 
   const markAllAsRead = async () => {
     try {
       await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notification/mark-all-read');
-      // Optimistically update the UI before refetching
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (err) {
       console.error('Failed to mark as read:', err.message);
-      // Consider adding user feedback here
     }
   };
 
@@ -109,8 +114,18 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
 
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-full max-w-xs sm:max-w-md lg:max-w-lg
- bg-white dark:bg-gray-800 shadow-lg rounded-md z-50 max-h-96 overflow-y-auto">
+              <div className={`
+                fixed sm:absolute 
+                ${isMobile ? 'left-1/2 transform -translate-x-1/2 w-[calc(100vw-2rem)]' : 'right-0 w-72'}
+                sm:w-80
+                md:w-96
+                top-16 sm:top-auto sm:mt-2
+                bg-white dark:bg-gray-800 
+                shadow-lg rounded-md 
+                z-50 
+                max-h-[70vh]
+                overflow-y-auto
+              `}>
                 <div className="p-4 text-sm text-gray-700 dark:text-gray-200">
                   <div className="flex justify-between items-center mb-2">
                     <p className="font-semibold">Recent Notifications</p>
@@ -154,7 +169,6 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                 </div>
               </div>
             )}
-
           </div>
 
           {/* User Avatar and Dropdown */}
