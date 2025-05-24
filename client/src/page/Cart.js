@@ -104,7 +104,7 @@ function Cart() {
               </span>
             </div>
             <button
-              onClick={() => navigate('/order-confirmation')}
+              onClick={() => navigate('/place-order')}
               className="w-full mt-4 sm:mt-6 bg-blue-600 text-white py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition duration-300 font-medium"
             >
               Proceed to Checkout
