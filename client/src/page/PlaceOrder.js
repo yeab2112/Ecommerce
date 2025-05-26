@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { ShopContext } from "../context/ShopContext";
 
 function PlaceOrder() {
-  const { cart, currency, delivery_fee, navigate } = useContext(ShopContext);
+  const { setCart,cart, currency, delivery_fee, navigate } = useContext(ShopContext);
 
   // State for handling delivery information
   const [deliveryInfo, setDeliveryInfo] = useState({
@@ -33,35 +33,66 @@ function PlaceOrder() {
   const finalTotal = totalPrice + delivery_fee;
 
   // Handle order confirmation
-  const handleOrderConfirmation = () => {
-    if (!paymentMethod) {
-      alert("Please select a payment method.");
-      return;
-    }
-    
-    // Validate required fields
-    const requiredFields = ['firstName', 'lastName', 'email', 'address', 'city', 'country', 'phone'];
-    const missingFields = requiredFields.filter(field => !deliveryInfo[field]);
-    
-    if (missingFields.length > 0) {
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
-      return;
-    }
-    
-    // Save the order details to localStorage
-    const orderDetails = {
+  const handleOrderConfirmation = async () => {
+  if (!paymentMethod) {
+    alert("Please select a payment method.");
+    return;
+  }
+  
+  // Validate required fields
+  const requiredFields = ['firstName', 'lastName', 'email', 'address', 'city', 'country', 'phone'];
+  const missingFields = requiredFields.filter(field => !deliveryInfo[field]);
+  
+  if (missingFields.length > 0) {
+    alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+    return;
+  }
+  
+  try {
+    // Prepare items with all required fields
+    const orderItems = cart.map(item => ({
+      product: item._id || item.productId, // Ensure you're sending the product ID
+      name: item.name,
+      image: item.image, // Add if your backend expects it
+      size: item.size || 'standard', // Provide default if needed
+      color: item.color || 'default',
+      quantity: item.quantity,
+      price: item.price
+    }));
+
+    const orderData = {
       deliveryInfo,
       paymentMethod,
-      cart, // Store cart items with color information
-      total: finalTotal,
+      items: orderItems, // Use the properly formatted items
+      subtotal: totalPrice,
+      deliveryFee: delivery_fee,
+      total: finalTotal
     };
+
+    // Send to backend
+    const response = await fetch('https://ecommerce-rho-hazel.vercel.app/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(orderData)
+    });
+
+    const data = await response.json();
     
-    localStorage.setItem('orderDetails', JSON.stringify(orderDetails));
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to create order');
+    }
 
-    // Redirect to the order confirmation page
+    setCart([]);
     navigate('/order-confirmation');
-  };
-
+  } catch (error) {
+    console.error('Order failed:', error);
+    alert(error.message || 'Order failed. Please try again.');
+  }
+};
+;
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white shadow-lg rounded-md">
       <h1 className="text-2xl font-bold mb-4 text-center">Place Your Order</h1>
