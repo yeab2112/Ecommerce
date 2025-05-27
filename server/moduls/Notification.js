@@ -6,6 +6,12 @@ const notificationSchema = new mongoose.Schema({
     ref: 'Order',
     required: true
   },
+   type: {
+    type: String,
+    required: true,
+    enum: ['order_received', 'system_alert', 'customer_message'],
+    default: 'order_received'
+  },
   customer: {
     name: { type: String, required: true },
     email: { type: String, required: true }

@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { asset } from '../asset/asset';
 import { Bell } from 'lucide-react';
 
 const Navbar = ({ onLogout, user, onToggleSidebar }) => {
+  // State management
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -12,48 +13,44 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
+  // User profile data
   const [profileData, setProfileData] = useState({
     name: user?.name || 'Admin User',
     email: user?.email || 'admin@example.com',
     avatar: user?.avatar || asset.user,
   });
 
+  // Settings configuration
   const [settings, setSettings] = useState({
     theme: 'light',
     notifications: true,
     language: 'en',
   });
 
+  // Responsive design effect
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const toggleDropdown = () => setShowDropdown(!showDropdown);
+  // Notification handling
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const { data } = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications');
+      const receivedNotifications = data.filter(n => 
+        n.type === 'order_received' && n.orderId
+      );
+      const unread = receivedNotifications.filter(n => !n.read);
+      setNotifications(receivedNotifications);
+      setUnreadCount(unread.length);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err.message);
+    }
+  }, []);
 
-  const fetchNotifications = async () => {
-  try {
-    const res = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications');
-    
-    // Only show notifications where order status is "received"
-    const receivedNotifications = res.data.filter(n => 
-      n.type === 'order_received' || 
-      (n.orderId && n.orderId.status === 'received')
-    );
-
-    const unreadNotifications = receivedNotifications.filter(n => !n.read);
-    setNotifications(receivedNotifications);
-    setUnreadCount(unreadNotifications.length);
-  } catch (err) {
-    console.error('Failed to fetch notifications:', err.message);
-  }
-};
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     try {
       await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notification/mark-all-read');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -61,35 +58,63 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
     } catch (err) {
       console.error('Failed to mark as read:', err.message);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
-  const handleProfileUpdate = (updatedData) => {
-    setProfileData(updatedData);
-    setShowProfileModal(false);
-  };
-
-  const handleSettingsUpdate = (updatedSettings) => {
+  // Settings handler
+  const handleSettingsUpdate = useCallback((updatedSettings) => {
     setSettings(updatedSettings);
     setShowSettingsModal(false);
-    if (updatedSettings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
+    document.documentElement.classList.toggle('dark', updatedSettings.theme === 'dark');
+  }, []);
+
+  // Profile handler
+  const handleProfileUpdate = useCallback((updatedData) => {
+    setProfileData(updatedData);
+    setShowProfileModal(false);
+  }, []);
+
+  // UI handlers
+  const toggleDropdown = useCallback(() => {
+    setShowDropdown(prev => !prev);
+  }, []);
+
+  const toggleNotifications = useCallback(() => {
+    setShowNotifications(prev => !prev);
+  }, []);
+
+  // Notification content renderer
+  const renderNotificationContent = useCallback((notification) => {
+    const order = notification.orderId;
+    return (
+      <>
+        <p className="font-medium">✅ Order Received</p>
+        {order && (
+          <div className="text-xs text-gray-500 mt-1">
+            <p>Order ID: {order._id?.slice(-6)}</p>
+            <p>Customer: {order.user?.name || 'Unknown'}</p>
+            <p>Time: {new Date(notification.receivedAt).toLocaleString()}</p>
+            {order.total && <p>Total: ${order.total.toFixed(2)}</p>}
+          </div>
+        )}
+      </>
+    );
+  }, []);
 
   return (
     <>
       <header className="border-b border-gray-200 p-4 flex items-center justify-between dark:border-gray-700 dark:bg-gray-800">
-        {/* Left Section */}
+        {/* Left section - Logo and menu toggle */}
         <div className="flex items-center space-x-3">
           <button
             onClick={onToggleSidebar}
             className="md:hidden mr-2 p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label="Toggle sidebar"
           >
             ☰
           </button>
@@ -101,13 +126,14 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
           <h1 className="text-gray-800 font-semibold text-lg dark:text-white">Admin Dashboard</h1>
         </div>
 
-        {/* Right Section */}
+        {/* Right section - Notifications and user menu */}
         <div className="relative flex items-center space-x-4">
-          {/* Notification Bell */}
+          {/* Notifications bell */}
           <div className="relative">
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={toggleNotifications}
               className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+              aria-label="Notifications"
             >
               <Bell className="w-6 h-6 text-gray-700 dark:text-gray-300" />
               {unreadCount > 0 && (
@@ -117,23 +143,20 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
               )}
             </button>
 
-            {/* Notification Dropdown */}
+            {/* Notifications dropdown */}
             {showNotifications && (
               <div className={`
                 fixed sm:absolute 
                 ${isMobile ? 'left-1/2 transform -translate-x-1/2 w-[calc(100vw-2rem)]' : 'right-0 w-72'}
-                sm:w-80
-                md:w-96
+                sm:w-80 md:w-96
                 top-16 sm:top-auto sm:mt-2
                 bg-white dark:bg-gray-800 
-                shadow-lg rounded-md 
-                z-50 
-                max-h-[70vh]
-                overflow-y-auto
+                shadow-lg rounded-md z-50 
+                max-h-[70vh] overflow-y-auto
               `}>
                 <div className="p-4 text-sm text-gray-700 dark:text-gray-200">
                   <div className="flex justify-between items-center mb-2">
-                    <p className="font-semibold">Recent Notifications</p>
+                    <p className="font-semibold">Received Orders</p>
                     {unreadCount > 0 && (
                       <button
                         onClick={markAllAsRead}
@@ -145,24 +168,15 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                   </div>
                   <ul className="space-y-2">
                     {notifications.length === 0 ? (
-                      <li className="text-gray-500 dark:text-gray-400">No notifications</li>
+                      <li className="text-gray-500 dark:text-gray-400">No new order receipts</li>
                     ) : (
                       notifications.map((n) => (
-                        <li key={n._id} className={`flex items-start space-x-2 p-2 ${!n.read ? 'bg-gray-100 dark:bg-gray-700' : ''}`}>
-                          <div className="text-sm">
-                            {n.message || '🔔 Notification'}
-                            {n.orderId && typeof n.orderId === 'object' && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                <p>Order ID: {n.orderId._id?.slice(-6)}</p>
-                                <p>Status: {n.orderId.status}</p>
-                                <p>Total: ${n.orderId.total?.toFixed(2)}</p>
-                              </div>
-                            )}
-                            {n.orderId && typeof n.orderId === 'string' && (
-                              <span className="block text-xs text-gray-500">
-                                Order ID: {n.orderId.slice(-6)}
-                              </span>
-                            )}
+                        <li 
+                          key={n._id} 
+                          className={`flex items-start space-x-2 p-2 rounded ${!n.read ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                        >
+                          <div className="text-sm flex-1">
+                            {renderNotificationContent(n)}
                           </div>
                           {!n.read && (
                             <span className="text-xs text-red-500 ml-auto">●</span>
@@ -176,15 +190,16 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
             )}
           </div>
 
-          {/* User Avatar and Dropdown */}
+          {/* User avatar dropdown */}
           <div className="relative">
             <button
               onClick={toggleDropdown}
               className="flex items-center focus:outline-none"
+              aria-label="User menu"
             >
               <img
                 src={profileData.avatar}
-                alt="User"
+                alt="User profile"
                 className="rounded-full w-10 h-10 border-2 border-gray-300 cursor-pointer hover:border-gray-400 transition duration-300 dark:border-gray-600"
               />
             </button>
@@ -235,6 +250,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
               <button
                 onClick={() => setShowProfileModal(false)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                aria-label="Close profile modal"
               >
                 ✕
               </button>
@@ -248,7 +264,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                 <input
                   type="text"
                   value={profileData.name}
-                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
@@ -257,7 +273,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                 <input
                   type="email"
                   value={profileData.email}
-                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
@@ -266,7 +282,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                 <input
                   type="text"
                   value={profileData.avatar}
-                  onChange={(e) => setProfileData({ ...profileData, avatar: e.target.value })}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, avatar: e.target.value }))}
                   className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
@@ -299,6 +315,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
               <button
                 onClick={() => setShowSettingsModal(false)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                aria-label="Close settings modal"
               >
                 ✕
               </button>
@@ -311,7 +328,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                 <label className="block text-gray-700 mb-2 dark:text-gray-300">Theme</label>
                 <select
                   value={settings.theme}
-                  onChange={(e) => setSettings({ ...settings, theme: e.target.value })}
+                  onChange={(e) => setSettings(prev => ({ ...prev, theme: e.target.value }))}
                   className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
                   <option value="light">Light</option>
@@ -323,7 +340,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                   type="checkbox"
                   id="notifications"
                   checked={settings.notifications}
-                  onChange={(e) => setSettings({ ...settings, notifications: e.target.checked })}
+                  onChange={(e) => setSettings(prev => ({ ...prev, notifications: e.target.checked }))}
                   className="mr-2"
                 />
                 <label htmlFor="notifications" className="text-gray-700 dark:text-gray-300">Enable Notifications</label>
@@ -332,7 +349,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                 <label className="block text-gray-700 mb-2 dark:text-gray-300">Language</label>
                 <select
                   value={settings.language}
-                  onChange={(e) => setSettings({ ...settings, language: e.target.value })}
+                  onChange={(e) => setSettings(prev => ({ ...prev, language: e.target.value }))}
                   className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
                   <option value="en">English</option>
@@ -363,4 +380,4 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
   );
 };
 
-export default Navbar;
+export default React.memo(Navbar);
