@@ -148,60 +148,72 @@ function ShopContextProvider({ children }) {
   }, [getProducts, fetchCart, fetchUserData, token]);
 
   // Add to cart function
- // Add to cart function - Updated
+
   const addToCart = async (productId, size, color) => {
-    if (!token) {
-      toast.error('Please login to add items to cart');
-      navigate('/login');
-      return false;
-    }
+  if (!token) {
+    toast.error('Please login to add items to cart');
+    navigate('/login');
+    return false;
+  }
 
-    // Normalize inputs
-    const normalizedSize = size?.trim()?.toUpperCase();
-    const normalizedColor = typeof color === 'string' 
-      ? color.trim() 
-      : color?.name?.trim();
+  // Normalize inputs
+  const normalizedSize = size?.trim()?.toUpperCase();
+  const normalizedColor = typeof color === 'string' 
+    ? color.trim() 
+    : color?.name?.trim();
 
-    if (!normalizedSize || !normalizedColor) {
-      toast.error('Please select both size and color');
-      return false;
-    }
+  if (!normalizedSize || !normalizedColor) {
+    toast.error('Please select both size and color');
+    return false;
+  }
 
-    const toastId = toast.loading('Adding to cart...');
+  // Check if product with same color and size already exists in cart
+  const existingItem = cart.find(item => 
+    item._id === productId && 
+    item.size === normalizedSize && 
+    item.color === normalizedColor
+  );
 
-    try {
-      const response = await axios.post(
-        'https://ecommerce-rho-hazel.vercel.app/api/cart/add',
-        { 
-          productId, 
-          size: normalizedSize,
-          color: normalizedColor 
-        },
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+  if (existingItem) {
+    toast.warning('This product with the same color and size is already in your cart');
+    return false;
+  }
 
-      if (response.data.success) {
-        await fetchCart(); // Refresh cart instead of local updates
-        toast.update(toastId, {
-          render: 'Added to cart successfully!',
-          type: 'success',
-          isLoading: false,
-          autoClose: 2000
-        });
-        return true;
-      }
-      throw new Error(response.data.message || 'Failed to add to cart');
-    } catch (error) {
-      console.error('Add to cart error:', error);
+  const toastId = toast.loading('Adding to cart...');
+
+  try {
+    const response = await axios.post(
+      'https://ecommerce-rho-hazel.vercel.app/api/cart/add',
+      { 
+        productId, 
+        size: normalizedSize,
+        color: normalizedColor 
+      },
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+
+    if (response.data.success) {
+      await fetchCart(); // Refresh cart instead of local updates
       toast.update(toastId, {
-        render: error.response?.data?.message || error.message || 'Failed to add to cart',
-        type: 'error',
+        render: 'Added to cart successfully!',
+        type: 'success',
         isLoading: false,
-        autoClose: 3000
+        autoClose: 2000
       });
-      return false;
+      return true;
     }
-  };
+    throw new Error(response.data.message || 'Failed to add to cart');
+  } catch (error) {
+    console.error('Add to cart error:', error);
+    toast.update(toastId, {
+      render: error.response?.data?.message || error.message || 'Failed to add to cart',
+      type: 'error',
+      isLoading: false,
+      autoClose: 3000
+    });
+    return false;
+  }
+};
 
   // Update cart item quantity
   const updateCartItem = async (productId, size, color, newQuantity) => {
