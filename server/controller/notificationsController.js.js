@@ -49,6 +49,10 @@ const markAllAsRead = async (req, res) => {
           email: order.user.email
 
 
+        },
+        conditionChecks:{
+          allItemsReceived:order.receivedConfirmation.allItemsReceived,
+          itemsInGoodCondition:order.receivedConfirmation.itemsInGoodCondition
         }
       });
     }

@@ -6,6 +6,10 @@ const notificationSchema = new mongoose.Schema({
     ref: 'Order',
     required: true
   },
+  message:{
+    type:String,
+    required:true
+  },
    type: {
     type: String,
     required: true,

@@ -97,7 +97,7 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
         {order && (
           <div className="text-xs text-gray-500 mt-1">
             <p>Order ID: {order._id?.slice(-6)}</p>
-            <p>Customer: {order.user?.name || 'Unknown'}</p>
+            <p>Customer: {customer?.name || 'Unknown'}</p>
             <p>Time: {new Date(notification.receivedAt).toLocaleString()}</p>
             {order.total && <p>Total: ${order.total.toFixed(2)}</p>}
           </div>
