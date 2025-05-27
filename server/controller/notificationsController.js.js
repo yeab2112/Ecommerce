@@ -1,7 +1,7 @@
 import Notification from '../moduls/Notification.js';
 import Order from "../moduls/order.js";
 // Create a new notification (used internally, not exposed via route)
- const notifyAdmin = async (confirmationData) => {
+const notifyAdmin = async (confirmationData) => {
   try {
     await Notification.create(confirmationData);
     console.log('Admin notified with new order confirmation.');
@@ -11,7 +11,7 @@ import Order from "../moduls/order.js";
 };
 
 // Get all notifications
- const getAllNotifications = async (req, res) => {
+const getAllNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find()
       .sort({ createdAt: -1 })
@@ -27,7 +27,7 @@ import Order from "../moduls/order.js";
 };
 
 // Mark all as read
- const markAllAsRead = async (req, res) => {
+const markAllAsRead = async (req, res) => {
   try {
     const { status } = req.body;
     const order = await Order.findByIdAndUpdate(
@@ -43,7 +43,13 @@ import Order from "../moduls/order.js";
         message: `Customer received Order #${order._id.toString().slice(-6)}`,
         orderId: order._id,
         read: false,
-        recipient: 'admin' // or specific admin ID
+
+        customer: {
+          name: order.user.name,
+          email: order.user.email
+
+
+        }
       });
     }
 
@@ -53,4 +59,4 @@ import Order from "../moduls/order.js";
   }
 };
 ;
-export {getAllNotifications,markAllAsRead,notifyAdmin}
+export { getAllNotifications, markAllAsRead, notifyAdmin }
