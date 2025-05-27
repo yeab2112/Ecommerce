@@ -1,5 +1,5 @@
 import Notification from '../moduls/Notification.js';
-
+import Order from "../moduls/order.js";
 // Create a new notification (used internally, not exposed via route)
  const notifyAdmin = async (confirmationData) => {
   try {
@@ -29,10 +29,28 @@ import Notification from '../moduls/Notification.js';
 // Mark all as read
  const markAllAsRead = async (req, res) => {
   try {
-    await Notification.updateMany({ read: false }, { read: true });
-    res.status(200).json({ message: 'All notifications marked as read' });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to update notifications' });
+    const { status } = req.body;
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    // Only create notification if status is "received"
+    if (status === 'received') {
+      await Notification.create({
+        type: 'order_received',
+        message: `Customer received Order #${order._id.toString().slice(-6)}`,
+        orderId: order._id,
+        read: false,
+        recipient: 'admin' // or specific admin ID
+      });
+    }
+
+    res.json({ success: true, order });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };
+;
 export {getAllNotifications,markAllAsRead,notifyAdmin}

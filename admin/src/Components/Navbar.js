@@ -37,17 +37,22 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
   const toggleDropdown = () => setShowDropdown(!showDropdown);
 
   const fetchNotifications = async () => {
-    try {
-      const res = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications');
-      const allNotifications = res.data;
-      const unreadNotifications = allNotifications.filter(n => !n.read);
-      setNotifications(allNotifications);
-      setUnreadCount(unreadNotifications.length);
-    } catch (err) {
-      console.error('Failed to fetch notifications:', err.message);
-    }
-  };
+  try {
+    const res = await axios.get('https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications');
+    
+    // Only show notifications where order status is "received"
+    const receivedNotifications = res.data.filter(n => 
+      n.type === 'order_received' || 
+      (n.orderId && n.orderId.status === 'received')
+    );
 
+    const unreadNotifications = receivedNotifications.filter(n => !n.read);
+    setNotifications(receivedNotifications);
+    setUnreadCount(unreadNotifications.length);
+  } catch (err) {
+    console.error('Failed to fetch notifications:', err.message);
+  }
+};
   const markAllAsRead = async () => {
     try {
       await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notification/mark-all-read');

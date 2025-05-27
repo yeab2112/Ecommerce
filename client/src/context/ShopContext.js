@@ -163,7 +163,7 @@ function ShopContextProvider({ children }) {
     : color?.name?.trim();
 
   if (!normalizedSize || !normalizedColor) {
-    toast.error('Please select both size and color');
+    toast.error('Please select both size and colord');
     return false;
   }
 
