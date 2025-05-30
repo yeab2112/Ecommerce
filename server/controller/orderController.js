@@ -199,20 +199,65 @@ const updateOrderStatus = async (req, res) => {
     const { status, carrier, trackingNumber } = req.body;
     const { orderId } = req.params;
 
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    // Admin-allowed statuses (user sets only 'return_requested' optionally elsewhere)
+    const validStatuses = [
+      'processing',
+      'shipped',
+      'delivered',
+      'cancelled',
+      'return_approved',
+      'return_rejected'
+    ];
+
+    // Sequential flow control: from -> allowed next statuses
+   const allowedTransitions = {
+  pending: ['processing', 'cancelled'],
+  processing: ['shipped', 'cancelled'],
+  shipped: ['delivered'],
+  delivered: [],             // user sets 'received' after delivery
+  received: [],              // user only, admin doesn't touch
+  return_requested: ['return_approved', 'return_rejected'],
+  return_approved: [],
+  return_rejected: [],
+  cancelled: []
+};
+
+
+    // Step 1: Check if requested status is allowed generally
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid status value'
+        message: 'Invalid status. Only allowed admin statuses can be used.'
       });
     }
 
+    // Step 2: Find the current order
+    const currentOrder = await Order.findById(orderId);
+    if (!currentOrder) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    const currentStatus = currentOrder.status;
+
+    // Step 3: Validate transition
+    const allowedNext = allowedTransitions[currentStatus] || [];
+    if (!allowedNext.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status transition from "${currentStatus}" to "${status}". Allowed: ${allowedNext.join(', ')}`
+      });
+    }
+
+    // Step 4: Build update data
     const updateData = {
       status,
       updatedAt: new Date()
     };
 
-    // Add tracking info when status changes to 'shipped'
+    // Step 5: If shipping, add tracking info
     if (status === 'shipped') {
       updateData.tracking = {
         carrier: carrier || 'Standard Shipping',
@@ -221,26 +266,17 @@ const updateOrderStatus = async (req, res) => {
       };
     }
 
+    // Step 6: Perform update
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
       updateData,
-      {
-        new: true,
-        runValidators: true
-      }
+      { new: true, runValidators: true }
     ).populate('user', 'name email');
-
-    if (!updatedOrder) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found'
-      });
-    }
 
     res.json({
       success: true,
       order: updatedOrder,
-      message: `Order status updated to ${status}`
+      message: `Order status updated from "${currentStatus}" to "${status}"`
     });
 
   } catch (error) {
@@ -251,6 +287,7 @@ const updateOrderStatus = async (req, res) => {
     });
   }
 };
+
 const confirmOrderReceived = async (req, res) => {
   try {
     const { note, allItemsReceived, itemsInGoodCondition } = req.body;

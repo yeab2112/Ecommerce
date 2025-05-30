@@ -59,6 +59,18 @@ function Orders() {
     fetchAllOrders();
   }, [atoken]);
 
+  // Allowed status transitions
+  const getAllowedStatuses = (currentStatus) => {
+    const transitions = {
+      pending: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered'],
+      delivered: [],
+      cancelled: []
+    };
+    return transitions[currentStatus] || [];
+  };
+
   // Handle status update
   const handleStatusUpdate = async (orderId, newStatus) => {
     if (!orderId || !newStatus) return;
@@ -101,7 +113,9 @@ function Orders() {
       }
     } catch (err) {
       console.error('Status update error:', err);
-      toast.error(err.response?.data?.message || 'Failed to update status');
+      toast.error(err.response?.data?.message || 'Invalid status transition');
+      // Force re-render to reset dropdown
+      setOrders(prev => [...prev]);
     } finally {
       setIsUpdating(prev => ({ ...prev, [orderId]: false }));
     }
@@ -330,14 +344,20 @@ function Orders() {
                   <select
                     value={order.status}
                     onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
-                    disabled={isUpdating[order._id]}
+                    disabled={isUpdating[order._id] || ['delivered', 'cancelled'].includes(order.status)}
                     className="border rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                   >
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
+                    {/* Current status */}
+                    <option value={order.status}>
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </option>
+
+                    {/* Dynamically show allowed statuses */}
+                    {getAllowedStatuses(order.status).map(status => (
+                      <option key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

@@ -6,28 +6,32 @@ const notificationSchema = new mongoose.Schema({
     ref: 'Order',
     required: true
   },
-  message:{
-    type:String,
-    required:true
-  },
-   type: {
-    type: String,
-    required: true,
-    enum: ['order_received', 'system_alert', 'customer_message'],
-    default: 'order_received'
-  },
   customer: {
-    name: { type: String, required: true },
-    email: { type: String, required: true }
+    name: {
+      type: String,
+      required: true
+    },
+    email: {
+      type: String,
+      required: true
+    }
   },
   receivedAt: {
     type: Date,
     default: Date.now
   },
-  note: String,
+  note: {
+    type: String
+  },
   conditionChecks: {
-    allItemsReceived: { type: Boolean, required: true },
-    itemsInGoodCondition: { type: Boolean, required: true }
+    allItemsReceived: {
+      type: Boolean,
+      required: true
+    },
+    itemsInGoodCondition: {
+      type: Boolean,
+      required: true
+    }
   },
   read: {
     type: Boolean,
@@ -35,5 +39,5 @@ const notificationSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-const Notification = mongoose.model('Notification', notificationSchema);
-export default Notification;
+// Prevent model overwrite during hot reloads
+export default mongoose.models.Notification || mongoose.model('Notification', notificationSchema);
