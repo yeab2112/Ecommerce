@@ -132,7 +132,7 @@ function PlaceOrder() {
         subtotal: totalPrice,
         deliveryFee: delivery_fee,
         total: finalTotal,
-        
+        paymentStatus: paymentMethod === 'Cash on Delivery' ? 'completed' : 'pending'
       };
 
       if (paymentMethod === 'Online Payment') {
