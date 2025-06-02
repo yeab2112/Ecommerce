@@ -64,7 +64,7 @@ const chapaCallback = async (req, res) => {
       if (status !== 'success') {
         await Order.findOneAndUpdate(
           { _id: tx_ref },
-          { status: 'payment_failed' }
+          { payment: 'payment_failed' }
         );
         return res.redirect(`http://localhost:3000/payment-failed`);
       }
@@ -82,7 +82,7 @@ const chapaCallback = async (req, res) => {
       if (verificationResponse.data.status !== 'success') {
         await Order.findOneAndUpdate(
           { _id: tx_ref },
-          { status: 'payment_failed' }
+          { payment: 'false' }
         );
         return res.redirect(`http://localhost:3000/payment-failed`);
       }
@@ -91,7 +91,7 @@ const chapaCallback = async (req, res) => {
       const order = await Order.findOneAndUpdate(
         { _id: tx_ref },
         { 
-          status: 'paid',
+          payment: 'true',
           paymentDetails: verificationResponse.data.data
         },
         { new: true }

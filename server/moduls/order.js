@@ -69,18 +69,42 @@ const orderSchema = new mongoose.Schema({
     enum: ['Cash on Delivery', 'Online Payment'],
     required: true
   },
-  payment: {
-    type: Boolean,
-    default: false,
-    required: true
+  paymentDetails: {
+  status: {
+    type: String,
+    enum: [
+      'pending',       // Payment not started
+      'initiated',     // Payment process started
+      'completed',     // Successful payment
+      'failed',       // Payment failed
+      'refunded',      // Full refund processed
+      'partially_refunded' // Partial refund
+    ],
+    default: 'pending'
   },
+  refundReason: {
+    type: String,
+    enum: ["return", "cancellation", "discount", "other"],
+  }
+
+},
   items: [orderItemSchema],
   subtotal: { type: Number, required: true, min: 0 },
   deliveryFee: { type: Number, required: true, min: 0 },
   total: { type: Number, required: true, min: 0 },
  status: {
   type: String,
-  enum: ['pending', 'processing', 'shipped', 'delivered', 'received', 'cancelled, refunded, returned'],
+  enum: [
+    'pending',          // Order placed, payment pending
+    'processing',       // Payment received, preparing order
+    'shipped',          // Handed to delivery
+    'delivered',        // Delivery complete
+    'received',         // Confirmed by customer
+    'cancelled',        // Order cancelled
+    'return_requested', // Customer wants to return
+    'return_approved',  // Admin approved return
+    'return_rejected'   // Admin rejected return
+  ],
   default: 'pending'
 }
 ,

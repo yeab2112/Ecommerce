@@ -1,12 +1,12 @@
 import Order from "../moduls/order.js";
 import UserModel from "../moduls/user.js";
-import { notifyAdmin } from "./notificationsController.js.js";
+import { notifyAdmin } from "./notificationsController.js";
 // Create a new order
 const createOrder = async (req, res) => {
   try {
     const { deliveryInfo, paymentMethod, items, subtotal, deliveryFee, total } = req.body;
     const userId = req.user._id;  // Ensure req.user is populated by auth middleware
-
+ 
     // Enhanced validation
     if (!deliveryInfo || !paymentMethod || !items || items.length === 0) {
       return res.status(400).json({
