@@ -14,7 +14,7 @@ dotenv.config(); // Load environment variables
 
     const chapaPayload = {
       amount,
-      currency: currency || 'ETB',
+      currency: currency ,
       email,
       first_name,
       last_name,
