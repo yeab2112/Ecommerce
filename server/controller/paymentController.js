@@ -193,7 +193,9 @@ const chapaCallback = async (req, res) => {
     // Update order status if possible
     if (req.query.tx_ref) {
       await Order.findByIdAndUpdate(req.query.tx_ref, {
-        paymentStatus: 'callback_error',
+         paymentDetails:{
+          status:'failed'
+        },
         paymentDetails: { error: error.message }
       }).catch(e => console.error('Failed to update order status:', e));
     }
