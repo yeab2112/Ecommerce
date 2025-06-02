@@ -39,63 +39,127 @@ function PlaceOrder() {
   const finalTotal = totalPrice + delivery_fee;
 
   // Handle online payment initiation
-  const initiateOnlinePayment = async (orderData) => {
-    setIsProcessingPayment(true);
-    setError(null);
-    
-    try {
-      // First create the order in your database with payment status 'pending'
-      const orderResponse = await axios.post(
-        'https://ecommerce-rho-hazel.vercel.app/api/orders', 
-        orderData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+ const initiateOnlinePayment = async (orderData) => {
+  setIsProcessingPayment(true);
+  setError(null);
+  
+  try {
+    // Validate essential data before proceeding
+    if (!orderData || !deliveryInfo.email || !finalTotal) {
+      throw new Error('Incomplete payment data provided');
+    }
 
-      const order = orderResponse.data;
+    // 1. First create the order in your database
+    const orderResponse = await axios.post(
+      'https://ecommerce-rho-hazel.vercel.app/api/orders', 
+      orderData,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        timeout: 15000 // 15 second timeout
+      }
+    );
 
-      // Then initiate Chapa payment
-      const paymentPayload = {
-        amount: finalTotal,
-        currency: currency === '$' ? 'USD' : 'ETB',
-        email: deliveryInfo.email,
-        first_name: deliveryInfo.firstName,
-        last_name: deliveryInfo.lastName,
-        tx_ref: order._id,
-        callback_url: 'https://ecommerce-rho-hazel.vercel.app/api/payment/callback',
-        return_url: 'https://ecommerce-rho-hazel.vercel.app/order-confirmation',
-        meta: {
-          order_id: order._id
-        }
-      };
+    // Enhanced response validation
+    if (!orderResponse.data?.success || !orderResponse.data?.order?._id) {
+      console.error('Invalid order response:', orderResponse.data);
+      throw new Error('Order creation failed - invalid server response');
+    }
 
-      const paymentResponse = await axios.post(
+    const order = orderResponse.data.order;
+    console.log('Order created successfully:', order);
+
+    // 2. Prepare payment payload with enhanced validation
+    const paymentPayload = {
+      amount: finalTotal,
+      currency: currency === '$' ? 'USD' : 'ETB',
+      email: deliveryInfo.email,
+      first_name: deliveryInfo.firstName || '',
+      last_name: deliveryInfo.lastName || '',
+      tx_ref: order._id,
+      callback_url: `${window.location.origin}/api/payment/callback`,
+      return_url: `${window.location.origin}/order-confirmation/${order._id}`,
+      meta: {
+        order_id: order._id,
+        user_id: localStorage.getItem('userId') || 'unknown'
+      }
+    };
+
+    console.log('Payment payload:', paymentPayload);
+
+    // 3. Initiate payment processing with retry logic
+    const paymentResponse = await retryRequest(
+      () => axios.post(
         'https://ecommerce-rho-hazel.vercel.app/api/payment/initiate',
         paymentPayload,
         {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          timeout: 20000 // 20 second timeout for payment processing
         }
-      );
+      ),
+      2 // Retry up to 2 times
+    );
 
-      if (paymentResponse.data.success && paymentResponse.data.url) {
-        // Redirect to payment page
-        window.location.href = paymentResponse.data.url;
-      } else {
-        throw new Error('Failed to initialize payment');
-      }
-    } catch (error) {
-      console.error('Payment initiation error:', error);
-      setError(error.response?.data?.message || 'Payment initiation failed. Please try again.');
-      setIsProcessingPayment(false);
+    // Validate payment response
+    if (!paymentResponse.data?.url) {
+      console.error('Invalid payment response:', paymentResponse.data);
+      throw new Error('Payment gateway did not return redirect URL');
     }
-  };
+
+    console.log('Payment initiation successful, redirecting...');
+    window.location.href = paymentResponse.data.url;
+
+  } catch (error) {
+    console.error('Detailed payment error:', {
+      message: error.message,
+      code: error.code,
+      config: error.config,
+      response: error.response?.data,
+      stack: error.stack
+    });
+
+    let userMessage = 'Payment processing failed. Please try again.';
+    
+    if (error.response) {
+      // Handle specific error messages from server
+      if (error.response.data?.errors) {
+        userMessage = error.response.data.errors.join(', ');
+      } else if (error.response.data?.message) {
+        userMessage = error.response.data.message;
+      }
+      
+      if (error.response.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+        return;
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      userMessage = 'Request timed out. Please try again.';
+    } else if (error.message.includes('network')) {
+      userMessage = 'Network error. Please check your internet connection.';
+    }
+
+    setError(userMessage);
+    setIsProcessingPayment(false);
+  }
+};
+
+// Helper function for retry logic
+const retryRequest = async (fn, retries = 2, delay = 1000) => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries <= 0) throw error;
+    await new Promise(res => setTimeout(res, delay));
+    return retryRequest(fn, retries - 1, delay * 2);
+  }
+};
 
   // Handle order confirmation
   const handleOrderConfirmation = async () => {
