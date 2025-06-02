@@ -166,7 +166,9 @@ const chapaCallback = async (req, res) => {
     const updatedOrder = await Order.findByIdAndUpdate(
       tx_ref,
       { 
-        paymentStatus: 'completed',
+        paymentDetails:{
+          status:"completed"
+        } ,
         paymentDetails: verificationResponse.data.data,
         status: 'processing'
       },
