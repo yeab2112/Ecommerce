@@ -7,6 +7,6 @@ const paymentRoutes = express.Router();
 paymentRoutes.post('/initiate',authenticateUser, initiateChapaPayment);
 
 // Chapa callback URL
-paymentRoutes.get('/chapa/callback',authenticateUser, chapaCallback);
+paymentRoutes.get('/chapa/callback', chapaCallback);
 
 export default paymentRoutes;
