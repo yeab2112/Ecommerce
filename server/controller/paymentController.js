@@ -3,10 +3,10 @@ import Order from "../moduls/order.js";
 import dotenv from 'dotenv';
 dotenv.config();
 
-const CHAPA_API_URL = 'https://api.chapa.co/v1/transaction';
-const FRONTEND_BASE_URL = process.env.NODE_ENV === 'production'
-  ? process.env.FRONTEND_PROD_URL
-  : 'http://localhost:3000';
+const CHAPA_API_URL = process.env.CHAPA_SECRET_KEY;
+// Hardcoded URLs for frontend and backend
+const FRONTEND_BASE_URL = 'https://ecommerce-client-lake.vercel.app';  // your real frontend URL
+const BACKEND_BASE_URL = 'https://your-backend-api.vercel.app';       // your backend URL
 
 const initiateChapaPayment = async (req, res) => {
   try {
@@ -27,7 +27,6 @@ const initiateChapaPayment = async (req, res) => {
       currency = 'ETB',
       first_name = '',
       last_name = '',
-      callback_url,
       return_url,
       meta = {}
     } = req.body;
@@ -54,7 +53,7 @@ const initiateChapaPayment = async (req, res) => {
       first_name: first_name.trim(),
       last_name: last_name.trim(),
       tx_ref,
-      callback_url: callback_url || `${req.headers.origin}/api/payment/callback`,
+      callback_url:`${BACKEND_BASE_URL}/api/payment/chapa/callback`,
       return_url: return_url || `${FRONTEND_BASE_URL}/order-confirmation`,
       customization: {
         title: "Addis Zemmon",
@@ -93,14 +92,14 @@ const initiateChapaPayment = async (req, res) => {
         status: 'initiated'
       },
 
-      paymentReference: response.data.data.checkout_url
+      paymentReference: response.data.data.checkout_url,
+      
     });
 
     return res.json({
       success: true,
       url: response.data.data.checkout_url,
       tx_ref,
-      verification_url: `${req.headers.origin}/api/payment/verify/${tx_ref}`
     });
 
   } catch (error) {

@@ -79,7 +79,6 @@ function PlaceOrder() {
       first_name: deliveryInfo.firstName || '',
       last_name: deliveryInfo.lastName || '',
       tx_ref: order._id,
-      callback_url: `${window.location.origin}/api/payment/callback`,
       return_url: `${window.location.origin}/order-confirmation/${order._id}`,
       meta: {
         order_id: order._id,
