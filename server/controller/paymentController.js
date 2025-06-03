@@ -2,8 +2,8 @@ import axios from 'axios';
 import Order from "../moduls/order.js";
 import dotenv from 'dotenv';
 dotenv.config();
+const CHAPA_API_URL = 'https://api.chapa.co/v1/transaction';
 
-const CHAPA_API_URL = process.env.CHAPA_SECRET_KEY;
 // Hardcoded URLs for frontend and backend
 const FRONTEND_BASE_URL = 'https://ecommerce-client-lake.vercel.app';  // your real frontend URL
 const BACKEND_BASE_URL = 'https://your-backend-api.vercel.app';       // your backend URL
