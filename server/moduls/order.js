@@ -70,57 +70,54 @@ const orderSchema = new mongoose.Schema({
     required: true
   },
   paymentDetails: {
-  status: {
-    type: String,
-    enum: [
-      'pending',       // Payment not started
-      'initiated',     // Payment process started
-      'completed',     // Successful payment
-      'failed',       // Payment failed
-      'refunded',      // Full refund processed
-      'partially_refunded' // Partial refund
-    ],
-    default: 'pending'
+    status: {
+      type: String,
+      enum: [
+        'pending',
+        'initiated',
+        'completed',
+        'failed',
+        'refunded',
+        'partially_refunded'
+      ],
+      default: 'pending'
+    },
+    refundReason: {
+      type: String,
+      enum: ["return", "cancellation", "discount", "other"],
+    }
   },
-  refundReason: {
-    type: String,
-    enum: ["return", "cancellation", "discount", "other"],
-  }
-
-},
   items: [orderItemSchema],
   subtotal: { type: Number, required: true, min: 0 },
   deliveryFee: { type: Number, required: true, min: 0 },
   total: { type: Number, required: true, min: 0 },
- status: {
-  type: String,
-  enum: [
-    'pending',          // Order placed, payment pending
-    'processing',       // Payment received, preparing order
-    'shipped',          // Handed to delivery
-    'delivered',        // Delivery complete
-    'received',         // Confirmed by customer
-    'cancelled',        // Order cancelled
-    'return_requested', // Customer wants to return
-    'return_approved',  // Admin approved return
-    'return_rejected'   // Admin rejected return
-  ],
-  default: 'pending'
-}
-,
+  status: {
+    type: String,
+    enum: [
+      'pending',
+      'processing',
+      'shipped',
+      'delivered',
+      'received',
+      'cancelled',
+      'return_requested',
+      'return_approved',
+      'return_rejected'
+    ],
+    default: 'pending'
+  },
   tracking: {
     carrier: String,
     trackingNumber: String,
     updatedAt: Date
   },
- receivedConfirmation: {
-  confirmed: { type: Boolean, default: false },
-  confirmedAt: Date,
-  note: String,
-  allItemsReceived: Boolean,
-  itemsInGoodCondition: Boolean
-}
-
+  receivedConfirmation: {
+    confirmed: { type: Boolean, default: false },
+    confirmedAt: Date,
+    note: String,
+    allItemsReceived: Boolean,
+    itemsInGoodCondition: Boolean
+  }
 }, { timestamps: true });
 
 const Order = mongoose.model('Order', orderSchema);
