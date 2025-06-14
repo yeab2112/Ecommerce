@@ -5,8 +5,8 @@ import { notifyAdmin } from "./notificationsController.js";
 const createOrder = async (req, res) => {
   try {
     const { deliveryInfo, paymentMethod, items, subtotal, deliveryFee, total, paymentStatus } = req.body;
-    const userId = req.user._id;  // Ensure req.user is populated by auth middleware
- 
+    const userId = req.user._id;
+
     // Enhanced validation
     if (!deliveryInfo || !paymentMethod || !items || items.length === 0) {
       return res.status(400).json({
@@ -23,8 +23,6 @@ const createOrder = async (req, res) => {
           message: 'Invalid item data in order'
         });
       }
-
-      // Add default color if not provided
       if (!item.color) {
         item.color = 'default';
       }
@@ -41,7 +39,12 @@ const createOrder = async (req, res) => {
       }
     }
 
-    // Create new order with color information
+    // Generate unique transaction reference
+    const generateTxRef = () => {
+      return `tx-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    };
+
+    // Create new order with transaction reference
     const order = new Order({
       user: userId,
       deliveryInfo,
@@ -51,12 +54,13 @@ const createOrder = async (req, res) => {
         name: item.name,
         image: item.image,
         size: item.size,
-        color: item.color || 'default', // Ensure color is included
+        color: item.color,
         quantity: item.quantity,
         price: item.price
       })),
-     paymentDetails: {
-        status: paymentStatus // Use the paymentStatus from root level
+      paymentDetails: {
+        status: paymentStatus,
+        tx_ref: generateTxRef() // Generate unique transaction reference
       },
       subtotal,
       deliveryFee,
@@ -93,6 +97,15 @@ const createOrder = async (req, res) => {
 
   } catch (error) {
     console.error('Error creating order:', error);
+    
+    // Handle duplicate key error specifically
+    if (error.code === 11000 && error.keyPattern && error.keyPattern['paymentDetails.tx_ref']) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction reference conflict. Please try again.'
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Failed to create order',
@@ -100,7 +113,6 @@ const createOrder = async (req, res) => {
     });
   }
 };
-
 // Get all orders with items for current user
 const getUserOrders = async (req, res) => {
   try {
