@@ -4,7 +4,7 @@ import { notifyAdmin } from "./notificationsController.js";
 // Create a new order
 const createOrder = async (req, res) => {
   try {
-    const { deliveryInfo, paymentMethod, items, subtotal, deliveryFee, total,paymentStatus } = req.body;
+    const { deliveryInfo, paymentMethod, items, subtotal, deliveryFee, total, paymentStatus } = req.body;
     const userId = req.user._id;  // Ensure req.user is populated by auth middleware
  
     // Enhanced validation
@@ -55,8 +55,8 @@ const createOrder = async (req, res) => {
         quantity: item.quantity,
         price: item.price
       })),
-      paymentDetails:{
-      status: paymentStatus,
+     paymentDetails: {
+        status: paymentStatus // Use the paymentStatus from root level
       },
       subtotal,
       deliveryFee,
