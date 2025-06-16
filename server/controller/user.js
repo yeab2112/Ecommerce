@@ -76,11 +76,16 @@ const UserLogin = async (req, res) => {
 
     // Send success response with token and user info
     res.json({ success: true, token, userA,message:"Login successful!" });
-  } catch (error) {
-    console.error('Error logging in user:', error);
-    res.status(500).json({ message: 'Server Error' });
-  }
-};
+ } catch (error) {
+  console.error('❌ Order creation error:', error.message);
+  console.error(error.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: error.message
+  });
+}
+}
 
 // Admin Login 
 
