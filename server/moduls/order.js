@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import './user.js';
 
 const orderItemSchema = new mongoose.Schema({
   product: {  
@@ -9,37 +8,27 @@ const orderItemSchema = new mongoose.Schema({
   },
   name: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   size: {
     type: String,
     required: true,
-    uppercase: true,
     enum: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
   },
   color: {
     type: String,
-    required: true,
-    default: 'default',
-    trim: true
+    default: 'default'
   },
   quantity: {
     type: Number,
     required: true,
-    min: 1,
-    max: 100
+    min: 1
   },
   price: {
     type: Number,
-    required: true,
-    min: 0,
-    set: v => parseFloat(v.toFixed(2))
+    required: true
   },
-  image: {
-    type: String,
-    default: '/images/product-placeholder.jpg'
-  }
+  image: String
 });
 
 const deliveryInfoSchema = new mongoose.Schema({
@@ -48,8 +37,8 @@ const deliveryInfoSchema = new mongoose.Schema({
   email: { type: String, required: true },
   address: { type: String, required: true },
   city: { type: String, required: true },
-  state: { type: String, required: true },
-  zipCode: { type: String, required: true },
+  state: { type: String },
+  zipCode: { type: String },
   country: { type: String, required: true },
   phone: { type: String, required: true }
 });
@@ -60,68 +49,29 @@ const orderSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  deliveryInfo: {
-    type: deliveryInfoSchema,
-    required: true
-  },
+  deliveryInfo: deliveryInfoSchema,
   paymentMethod: {
     type: String,
     enum: ['Cash on Delivery', 'Online Payment'],
     required: true
   },
   paymentDetails: {
+    status: {
+      type: String,
+      enum: ['pending', 'completed', 'failed'],
+      default: 'pending'
+    },
+    tx_ref: String
+  },
+  items: [orderItemSchema],
+  subtotal: { type: Number, required: true },
+  deliveryFee: { type: Number, required: true },
+  total: { type: Number, required: true },
   status: {
     type: String,
-    enum: [
-      'pending',       // Payment not started
-      'initiated',     // Payment process started
-      'completed',     // Successful payment
-      'failed',       // Payment failed
-      'refunded',      // Full refund processed
-      'partially_refunded' // Partial refund
-    ],
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
-  },
-  refundReason: {
-    type: String,
-    enum: ["return", "cancellation", "discount", "other"],
   }
-
-},
-  items: [orderItemSchema],
-  subtotal: { type: Number, required: true, min: 0 },
-  deliveryFee: { type: Number, required: true, min: 0 },
-  total: { type: Number, required: true, min: 0 },
- status: {
-  type: String,
-  enum: [
-    'pending',          // Order placed, payment pending
-    'processing',       // Payment received, preparing order
-    'shipped',          // Handed to delivery
-    'delivered',        // Delivery complete
-    'received',         // Confirmed by customer
-    'cancelled',        // Order cancelled
-    'return_requested', // Customer wants to return
-    'return_approved',  // Admin approved return
-    'return_rejected'   // Admin rejected return
-  ],
-  default: 'pending'
-}
-,
-  tracking: {
-    carrier: String,
-    trackingNumber: String,
-    updatedAt: Date
-  },
- receivedConfirmation: {
-  confirmed: { type: Boolean, default: false },
-  confirmedAt: Date,
-  note: String,
-  allItemsReceived: Boolean,
-  itemsInGoodCondition: Boolean
-}
-
 }, { timestamps: true });
 
-const Order = mongoose.model('Order', orderSchema);
-export default Order;
+export default mongoose.model('Order', orderSchema);

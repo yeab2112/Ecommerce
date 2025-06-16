@@ -5,43 +5,20 @@ import { notifyAdmin } from "./notificationsController.js";
 const createOrder = async (req, res) => {
   try {
     const { deliveryInfo, paymentMethod, items, subtotal, deliveryFee, total } = req.body;
-    const userId = req.user._id;  // Ensure req.user is populated by auth middleware
- 
-    // Enhanced validation
-    if (!deliveryInfo || !paymentMethod || !items || items.length === 0) {
+    const userId = req.user._id;
+
+    // Validation
+    const requiredFields = ['firstName', 'lastName', 'email', 'address', 'city', 'country', 'phone'];
+    const missingFields = requiredFields.filter(field => !deliveryInfo[field]);
+    
+    if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required order information'
+        message: `Missing required fields: ${missingFields.join(', ')}`
       });
     }
 
-    // Validate each item in the items array
-    for (const item of items) {
-      if (!item.product || !item.name || !item.size || !item.quantity || !item.price) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid item data in order'
-        });
-      }
-
-      // Add default color if not provided
-      if (!item.color) {
-        item.color = 'default';
-      }
-    }
-
-    // Validate deliveryInfo structure
-    const requiredDeliveryFields = ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'zipCode', 'country', 'phone'];
-    for (const field of requiredDeliveryFields) {
-      if (!deliveryInfo[field]) {
-        return res.status(400).json({
-          success: false,
-          message: `Missing required delivery field: ${field}`
-        });
-      }
-    }
-
-    // Create new order with color information
+    // Create order
     const order = new Order({
       user: userId,
       deliveryInfo,
@@ -49,56 +26,39 @@ const createOrder = async (req, res) => {
       items: items.map(item => ({
         product: item.product,
         name: item.name,
-        image: item.image,
         size: item.size,
-        color: item.color || 'default', // Ensure color is included
+        color: item.color || 'default',
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        image: item.image
       })),
       subtotal,
       deliveryFee,
       total,
-      status: paymentMethod === 'Cash on Delivery' ? 'pending' : 'payment_pending'
+      status: 'pending',
+      paymentDetails: {
+        status: paymentMethod === 'Online Payment' ? 'pending' : 'completed'
+      }
     });
 
-    // Save order to database
     const savedOrder = await order.save();
-    console.log('Order saved successfully:', savedOrder);
 
-    // Update user with saved order id and clear cart
-    const updatedUser = await UserModel.findByIdAndUpdate(
-      userId,
-      {
-        $push: { orders: savedOrder._id },
-        $set: { cartdata: {} }
-      },
-      { new: true }
-    );
-
-    if (!updatedUser) {
-      console.error('User not found during order creation');
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    // Update user's cart
+    await User.findByIdAndUpdate(userId, { $set: { cartdata: {} } });
 
     res.status(201).json({
       success: true,
-      message: 'Order created successfully',
       order: savedOrder
     });
 
   } catch (error) {
-    console.error('Error creating order:', error);
+    console.error('Order creation error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create order',
-      error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : error.message
+      message: 'Internal server error'
     });
   }
 };
-
 // Get all orders with items for current user
 const getUserOrders = async (req, res) => {
   try {

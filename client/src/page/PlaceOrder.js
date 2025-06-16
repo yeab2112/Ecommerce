@@ -119,7 +119,7 @@ function PlaceOrder() {
         product: item._id || item.productId,
         name: item.name,
         image: item.image,
-        size: item.size || 'standard',
+        size: item.size ,
         color: item.color || 'default',
         quantity: item.quantity,
         price: item.price
