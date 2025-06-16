@@ -255,6 +255,7 @@ function PlaceOrder() {
                 value={deliveryInfo.state}
                 onChange={handleInputChange}
                 className="border p-2 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
               />
             </div>
 
@@ -266,7 +267,9 @@ function PlaceOrder() {
                 value={deliveryInfo.zipCode}
                 onChange={handleInputChange}
                 className="border p-2 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
               />
+
               <input
                 type="text"
                 name="country"

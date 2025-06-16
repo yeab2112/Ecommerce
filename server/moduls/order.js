@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const orderItemSchema = new mongoose.Schema({
-  product: {  
+  product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
     required: true
@@ -37,8 +37,8 @@ const deliveryInfoSchema = new mongoose.Schema({
   email: { type: String, required: true },
   address: { type: String, required: true },
   city: { type: String, required: true },
-  state: { type: String },
-  zipCode: { type: String },
+  state: { type: String, required: true },
+  zipCode: { type: String, required: true },
   country: { type: String, required: true },
   phone: { type: String, required: true }
 });
@@ -61,7 +61,6 @@ const orderSchema = new mongoose.Schema({
       enum: ['pending', 'completed', 'failed'],
       default: 'pending'
     },
-    tx_ref: String
   },
   items: [orderItemSchema],
   subtotal: { type: Number, required: true },
