@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 
+// Remove the User import since we only need it as a reference
+// The ref: 'User' will work as long as the User model is registered with mongoose
+
 const orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
@@ -46,7 +49,7 @@ const deliveryInfoSchema = new mongoose.Schema({
 const orderSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'User', // This references the registered model name
     required: true
   },
   deliveryInfo: deliveryInfoSchema,
