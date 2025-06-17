@@ -40,66 +40,78 @@ function PlaceOrder() {
 
   // Handle online payment initiation
   const initiateOnlinePayment = async (orderData) => {
-    setIsProcessingPayment(true);
-    setError(null);
-    
-    try {
-      // First create the order in your database with payment status 'pending'
-      const orderResponse = await axios.post(
-        'https://ecommerce-rho-hazel.vercel.app/api/orders', 
-        orderData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+  setIsProcessingPayment(true);
+  setError(null);
+  
+  try {
+    // First create the order in your database with payment status 'pending'
+    const orderResponse = await axios.post(
+      'https://ecommerce-rho-hazel.vercel.app/api/orders', 
+      orderData,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-      );
-   // Debugging logs - add these
+      }
+    );
+
+    // Debugging logs - corrected
     console.log("Full order response:", orderResponse);
     console.log("Response data:", orderResponse.data);
-    console.log("Order ID from response:", orderResponse.data._id);
     console.log("Order object:", orderResponse.data.order);
-      const order = orderResponse.data;
+    console.log("Order ID from response:", orderResponse.data.order._id);
 
-      // Then initiate Chapa payment
-      const paymentPayload = {
-        amount: finalTotal,
-        currency: currency === '$' ? 'USD' : 'ETB',
-        email: deliveryInfo.email,
-        first_name: deliveryInfo.firstName,
-        last_name: deliveryInfo.lastName,
-        tx_ref: order._id,
-        callback_url: 'https://ecommerce-rho-hazel.vercel.app/api/payment/callback',
-        return_url: 'https://ecommerce-rho-hazel.vercel.app/order-confirmation',
-        meta: {
-          order_id: order._id
-        }
-      };
-
-      const paymentResponse = await axios.post(
-        'https://ecommerce-rho-hazel.vercel.app/api/payment/chapa',
-        paymentPayload,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (paymentResponse.data.success && paymentResponse.data.url) {
-        // Redirect to payment page
-        window.location.href = paymentResponse.data.url;
-      } else {
-        throw new Error('Failed to initialize payment');
-      }
-    } catch (error) {
-      console.error('Payment initiation error:', error);
-      setError(error.response?.data?.message || 'Payment initiation failed. Please try again.');
-      setIsProcessingPayment(false);
+    // Correct way to extract the order
+    const order = orderResponse.data.order;
+    if (!order || !order._id) {
+      throw new Error('Order creation failed - no order ID received');
     }
-  };
+
+    // Then initiate Chapa payment
+    const paymentPayload = {
+      amount: finalTotal.toFixed(2), // Ensure 2 decimal places
+      currency: currency === '$' ? 'USD' : 'ETB',
+      email: deliveryInfo.email,
+      first_name: deliveryInfo.firstName.substring(0, 50), // Chapa has length limits
+      last_name: deliveryInfo.lastName.substring(0, 50),
+      tx_ref: order._id, // Use the correct order ID
+      callback_url: 'https://ecommerce-rho-hazel.vercel.app/api/payment/callback',
+      return_url: 'https://ecommerce-rho-hazel.vercel.app/order-confirmation',
+      meta: {
+        order_id: order._id
+      }
+    };
+
+    console.log("Final payment payload:", paymentPayload);
+
+    const paymentResponse = await axios.post(
+      'https://ecommerce-rho-hazel.vercel.app/api/payment/chapa',
+      paymentPayload,
+      {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (paymentResponse.data.success && paymentResponse.data.url) {
+      // Redirect to payment page
+      window.location.href = paymentResponse.data.url;
+    } else {
+      throw new Error('Failed to initialize payment');
+    }
+  } catch (error) {
+    console.error('Payment initiation error:', {
+      message: error.message,
+      response: error.response?.data,
+      stack: error.stack
+    });
+    setError(error.response?.data?.message || 'Payment initiation failed. Please try again.');
+    setIsProcessingPayment(false);
+  }
+};
 
   // Handle order confirmation
   const handleOrderConfirmation = async () => {
