@@ -55,7 +55,11 @@ function PlaceOrder() {
           }
         }
       );
-
+   // Debugging logs - add these
+    console.log("Full order response:", orderResponse);
+    console.log("Response data:", orderResponse.data);
+    console.log("Order ID from response:", orderResponse.data._id);
+    console.log("Order object:", orderResponse.data.order);
       const order = orderResponse.data;
 
       // Then initiate Chapa payment
