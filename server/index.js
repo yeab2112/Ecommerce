@@ -16,73 +16,113 @@ dotenv.config();
 
 const app = express();
 
-// Middleware Setup
-app.use(helmet());
-app.use(morgan('dev'));
+// =============================================
+// 1. PROXY CONFIGURATION (MUST BE FIRST)
+// =============================================
+app.set('trust proxy', 1); // Trust Vercel's proxy
 
-// Rate limiting setup
-const limiter = rateLimit({
+// =============================================
+// 2. SECURITY MIDDLEWARE
+// =============================================
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Required for some payment processors
+      connectSrc: ["'self'", "https://api.payment-gateway.com"],
+      imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'] // Add your CDN
+    }
+  },
+  crossOriginEmbedderPolicy: false // Disable for API endpoints
+}));
+
+// =============================================
+// 3. RATE LIMITING
+// =============================================
+const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per windowMs
-  message: 'Too many requests from this IP, please try again later'
+  max: process.env.NODE_ENV === 'production' ? 500 : 1000, // Different limits for prod/dev
+  message: {
+    status: 'error',
+    message: 'Too many requests from this IP, please try again later'
+  },
+  validate: { 
+    trustProxy: true // Required for Vercel
+  },
+  skip: (req) => {
+    // Skip rate limiting for health checks and payment webhooks
+    return ['/health', '/api/payment/webhook'].includes(req.path);
+  }
 });
-app.use(limiter);
 
-// CORS setup
+// =============================================
+// 4. LOGGING & MONITORING
+// =============================================
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// =============================================
+// 5. CORS CONFIGURATION
+// =============================================
 const allowedOrigins = [
   'https://ecommerce-client-lake.vercel.app',
   'https://ecomm-admin-eta-two.vercel.app',
-  "https://ecommerce-5ulb.vercel.app",
+  'https://ecommerce-5ulb.vercel.app',
   'http://localhost:3000',
   'http://localhost:3001'
 ];
 
 const corsOptions = {
-  origin: function (origin, callback) {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn('🚨 Blocked by CORS:', origin);
-      callback(new Error(`Not allowed by CORS. Origin ${origin} not permitted`));
+      console.warn(`🚨 Blocked by CORS: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'X-Forwarded-For'
+  ],
   credentials: true,
-  optionsSuccessStatus: 200 // Handle legacy browsers (i.e., IE)
+  maxAge: 86400
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Pre-flight for all routes
+app.options('*', cors()); // Enable pre-flight for all routes
 
-// Body parsers
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true }));
+// =============================================
+// 6. BODY PARSERS
+// =============================================
+app.use(express.json({ 
+  limit: '10mb', // Increased for file uploads
+  verify: (req, res, buf) => {
+    req.rawBody = buf; // For payment webhook verification
+  }
+}));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health check route
+// =============================================
+// 7. APPLICATION ROUTES
+// =============================================
+
+// Health Check (No rate limiting)
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
-});
-
-// Root route
-app.get('/', (req, res) => {
-  res.json({
-    status: 'API Online',
-    message: 'Welcome to Yeabsi Ecommerce API',
-    version: '1.0.0',
-    endpoints: {
-      users: '/api/user',
-      products: '/api/product',
-      cart: '/api/cart',
-      orders: '/api/orders',
-      payment: '/api/payment',
-      health: '/health'
-    },
-    docs: 'https://github.com/yeab2112/Ecommerce/docs'
+  res.status(200).json({ 
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
   });
 });
 
-// API routes
+// Apply rate limiting to all API routes
+app.use('/api', apiLimiter);
+
+// API Routes
 app.use('/api/user', userRouter);
 app.use('/api/product', productRouter);
 app.use('/api/cart', cartRoutes);
@@ -90,47 +130,87 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/notification', notificationRouter);
 
-// Error handling for unknown routes
-app.use((req, res, next) => {
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'API Online',
+    message: 'Welcome to Ecommerce API',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    docs: 'https://github.com/your-repo/docs'
+  });
+});
+
+// =============================================
+// 8. ERROR HANDLING
+// =============================================
+
+// 404 Handler
+app.use((req, res) => {
   res.status(404).json({
     status: 'error',
     message: 'Resource not found',
-    path: req.originalUrl
+    path: req.originalUrl,
+    method: req.method
   });
 });
 
-// Centralized error handler
+// Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('🔥 Error:', err.stack);
+  console.error('🔥 Error:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.originalUrl,
+    ip: req.ip
+  });
 
-  // Handle CORS errors specifically
+  // Handle CORS errors
   if (err.message.includes('CORS')) {
     return res.status(403).json({
       status: 'error',
-      error: 'CORS policy violation',
-      message: 'Request not allowed from this origin'
+      code: 'CORS_ERROR',
+      message: 'Not allowed by CORS policy'
     });
   }
 
-  // General error handling
+  // Handle rate limit errors
+  if (err.statusCode === 429) {
+    return res.status(429).json({
+      status: 'error',
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: err.message
+    });
+  }
+
+  // Default error response
   res.status(err.statusCode || 500).json({
     status: 'error',
-    error: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    code: err.code || 'INTERNAL_SERVER_ERROR',
+    message: err.message || 'Something went wrong',
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
   });
 });
 
-// MongoDB Connection and server startup
-const port = process.env.PORT || 5000;
-const server = app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
-  console.log(`🔒 CORS enabled for origins: ${allowedOrigins.join(', ')}`);
-
+// =============================================
+// 9. SERVER INITIALIZATION
+// =============================================
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log(`📡 Listening on port ${PORT}`);
+  console.log(`🌐 Allowed origins: ${allowedOrigins.join(', ')}`);
 });
 
-// Handling unhandled promise rejections (if any)
+// Handle unhandled rejections
 process.on('unhandledRejection', (err) => {
   console.error('💥 UNHANDLED REJECTION! Shutting down...');
+  console.error(err.name, err.message);
+  server.close(() => process.exit(1));
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('💥 UNCAUGHT EXCEPTION! Shutting down...');
   console.error(err.name, err.message);
   server.close(() => process.exit(1));
 });
