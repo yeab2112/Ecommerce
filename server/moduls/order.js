@@ -1,8 +1,6 @@
 import mongoose from 'mongoose';
 
-// Remove the User import since we only need it as a reference
-// The ref: 'User' will work as long as the User model is registered with mongoose
-
+import './user.js'; // Adjust path as needed
 const orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
