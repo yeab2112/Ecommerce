@@ -74,7 +74,7 @@ function PlaceOrder() {
       };
 
       const paymentResponse = await axios.post(
-        'https://ecommerce-rho-hazel.vercel.app/api/payment/initiate',
+        'https://ecommerce-rho-hazel.vercel.app/api/payment/chapa',
         paymentPayload,
         {
           headers: {
