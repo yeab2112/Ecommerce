@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import './order.js'; 
 
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },

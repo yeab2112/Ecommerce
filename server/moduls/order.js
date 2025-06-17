@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 
-import './user.js'; // Adjust path as needed
 const orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,

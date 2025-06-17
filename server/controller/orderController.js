@@ -1,5 +1,6 @@
 import Order from "../moduls/order.js";
 import { notifyAdmin } from "./notificationsController.js"
+import UserModel from "../moduls/user.js";
 // Create a new order
 const createOrder = async (req, res) => {
   try {
@@ -43,7 +44,7 @@ const createOrder = async (req, res) => {
     const savedOrder = await order.save();
 
     // Update user's cart
-    await User.findByIdAndUpdate(userId, { $set: { cartdata: {} } });
+    await UserModel.findByIdAndUpdate(userId, { $set: { cartdata: {} } });
 
     res.status(201).json({
       success: true,
