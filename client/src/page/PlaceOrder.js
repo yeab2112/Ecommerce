@@ -77,7 +77,7 @@ function PlaceOrder() {
       last_name: deliveryInfo.lastName.substring(0, 50),
       tx_ref: order._id, // Use the correct order ID
       callback_url: 'https://ecommerce-rho-hazel.vercel.app/api/payment/callback',
-      return_url: 'https://ecommerce-rho-hazel.vercel.app/order-confirmation',
+      return_url: 'https://ecommerce-client-lake.vercel.app/order-confirmation',
       meta: {
         order_id: order._id
       }
