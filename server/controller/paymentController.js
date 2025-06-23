@@ -56,8 +56,6 @@ dotenv.config(); // Load environment variables
   }
 };
 
-import axios from 'axios';
-import Order from '../models/Order.js'; // adjust path as needed
 
 const chapaCallback = async (req, res) => {
   try {
