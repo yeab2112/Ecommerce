@@ -61,32 +61,37 @@ const chapaCallback = async (req, res) => {
   try {
     const { tx_ref, status } = req.query;
 
+    console.log("🌐 Chapa callback query:", req.query);
+
     if (!tx_ref) {
-      return res.status(400).redirect(`${process.env.FRONTEND_BASE_URL}/payment-error?reason=invalid_reference`);
+      return res.status(400).redirect(`${process.env.FRONTEND_BASE_URL}/payment-error?reason=missing_reference`);
     }
 
-    // Step 1: If status from Chapa is not success
+    // Step 1: If Chapa callback says status is NOT success
     if (status !== 'success') {
       await Order.findOneAndUpdate(
         { _id: tx_ref },
-        { 'paymentDetails.status': 'failed' }, // Correct nested update
+        { 'paymentDetails.status': 'failed' },
         { new: true }
       );
       return res.redirect(`${process.env.FRONTEND_BASE_URL}/payment-failed`);
     }
 
-    // Step 2: Verify with Chapa
+    // Step 2: Verify transaction with Chapa API
     const verificationResponse = await axios.get(
       `https://api.chapa.co/v1/transaction/verify/${tx_ref}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}`,
-        },
+          Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}`
+        }
       }
     );
 
+    console.log("✅ Chapa verification response:", verificationResponse.data);
+
     const verificationData = verificationResponse.data;
 
+    // Step 3: Check if verification failed
     if (verificationData.status !== 'success') {
       await Order.findOneAndUpdate(
         { _id: tx_ref },
@@ -96,15 +101,17 @@ const chapaCallback = async (req, res) => {
       return res.redirect(`${process.env.FRONTEND_BASE_URL}/payment-failed`);
     }
 
-    // Step 3: Mark as paid
+    // Step 4: Update order as successfully paid
     const updatedOrder = await Order.findOneAndUpdate(
       { _id: tx_ref },
       {
-        'paymentDetails.status': 'completed',
         paymentMethod: verificationData.data.payment_method || 'chapa',
-        paymentDetails: verificationData.data, // Save all details
-        status: 'processing', // Use correct enum: pending → processing
-        updatedAt: new Date(),
+        paymentDetails: {
+          ...verificationData.data,
+          status: 'completed'
+        },
+        status: 'processing',
+        updatedAt: new Date()
       },
       { new: true }
     );
@@ -112,16 +119,17 @@ const chapaCallback = async (req, res) => {
     if (!updatedOrder) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found with the provided reference',
+        message: 'Order not found with the provided tx_ref'
       });
     }
 
-    // Redirect to frontend confirmation page
+    // Step 5: Redirect to order confirmation page
     return res.redirect(`${process.env.FRONTEND_BASE_URL}/order-confirmation/${updatedOrder._id}`);
 
   } catch (error) {
-    console.error('Payment callback error:', error);
+    console.error('❌ Payment callback error:', error.message);
 
+    // Optional: Try to mark order as errored
     try {
       await Order.findOneAndUpdate(
         { _id: req.query.tx_ref },
@@ -129,16 +137,17 @@ const chapaCallback = async (req, res) => {
         { new: true }
       );
     } catch (dbError) {
-      console.error('Failed to update order status:', dbError);
+      console.error('❌ Failed to update payment error status:', dbError.message);
     }
 
     return res.status(500).json({
       success: false,
       message: 'Payment verification failed',
-      error: error.message,
+      error: error.message
     });
   }
 };
+
 
 
  export{initiateChapaPayment,chapaCallback}
