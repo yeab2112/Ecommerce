@@ -1,23 +1,20 @@
+// paymentRoutes.js
 import express from 'express';
 import { initiateChapaPayment, chapaCallback } from '../controller/paymentController.js';
-import authenticateUser from '../middleware/user.js';
 
-const  paymentRoutes = express.Router();
+const router = express.Router();
 
-// Initiate payment (authenticated)
-paymentRoutes.post('/chapa', authenticateUser, initiateChapaPayment);
+// Special middleware for Vercel's GET-with-body case
+const vercelGetBodyParser = (req, res, next) => {
+  if (req.method === 'GET' && req.headers['content-type'] === 'application/json') {
+    express.json()(req, res, next);
+  } else {
+    next();
+  }
+};
 
-// Callback handler (public)
-// In your paymentRoutes.js
-paymentRoutes.post('/callback', 
-  express.json(), // Enable JSON body parsing
-  chapaCallback
-);
+router.post('/chapa', initiateChapaPayment);
+router.get('/callback', vercelGetBodyParser, chapaCallback);
+router.post('/callback', express.json(), chapaCallback);
 
-paymentRoutes.get('/callback', 
-  express.json(),
-  express.urlencoded({ extended: true }),
-  chapaCallback
-);
-
-export default paymentRoutes;
+export default router;

@@ -9,17 +9,13 @@ const initiateChapaPayment = async (req, res) => {
 
     // Validate required fields
     if (!amount || !email || !tx_ref) {
-      console.error('Missing required fields:', { amount, email, tx_ref });
       return res.status(400).json({ 
         success: false, 
         message: 'Missing required fields (amount, email, or tx_ref)' 
       });
     }
 
-    // Construct callback URL dynamically
-    const callback_url = process.env.NODE_ENV === 'production'
-      ? 'https://ecommerce-rho-hazel.vercel.app/api/payment/callback'
-      : `${req.protocol}://${req.get('host')}/api/payment/callback`;
+    const callback_url = `${req.protocol}://${req.get('host')}/api/payment/callback`;
 
     const chapaPayload = {
       amount,
@@ -37,8 +33,6 @@ const initiateChapaPayment = async (req, res) => {
       meta: meta || {}
     };
 
-    console.log('Initiating Chapa payment with payload:', chapaPayload);
-
     const response = await axios.post(
       'https://api.chapa.co/v1/transaction/initialize',
       chapaPayload,
@@ -47,58 +41,55 @@ const initiateChapaPayment = async (req, res) => {
           'Authorization': `Bearer ${process.env.CHAPA_SECRET_KEY}`,
           'Content-Type': 'application/json'
         },
-        timeout: 10000 // 10 seconds timeout
+        timeout: 10000
       }
     );
 
-    if (response.data?.status === 'success' && response.data?.data?.checkout_url) {
-      console.log('Payment initiated successfully for tx_ref:', tx_ref);
+    if (response.data?.status === 'success') {
       return res.json({ 
         success: true, 
         url: response.data.data.checkout_url 
       });
     }
     
-    throw new Error(response.data?.message || 'Failed to initialize payment');
+    throw new Error(response.data?.message || 'Payment initialization failed');
 
   } catch (error) {
-    console.error('Payment initiation error:', {
-      message: error.message,
-      response: error.response?.data,
-      stack: error.stack
-    });
-    
-    const statusCode = error.response?.status || 500;
-    res.status(statusCode).json({ 
+    console.error('Payment error:', error.message);
+    res.status(500).json({ 
       success: false, 
-      message: error.response?.data?.message || error.message || 'Payment initiation failed' 
+      message: error.response?.data?.message || 'Payment processing failed' 
     });
   }
 };
 
 const chapaCallback = async (req, res) => {
   try {
-    // Log complete request for debugging
-    console.log('🔔 Full Callback Request:', {
+    // Special handling for Vercel's GET-with-body requests
+    let tx_ref, status;
+    
+    if (req.method === 'GET' && Object.keys(req.body).length > 0) {
+      // Handle Vercel's special case where GET has body
+      tx_ref = req.body.trx_ref;
+      status = req.body.status;
+    } else {
+      // Normal cases
+      tx_ref = req.body?.trx_ref || req.query?.tx_ref;
+      status = req.body?.status || req.query?.status;
+    }
+
+    console.log('Payment callback received:', {
       method: req.method,
-      headers: req.headers,
+      tx_ref,
+      status,
       body: req.body,
       query: req.query
     });
 
-    // Handle both GET (query) and POST (body) formats
-    const tx_ref = req.body?.trx_ref || req.query?.tx_ref;
-    const status = req.body?.status || req.query?.status;
-
     if (!tx_ref) {
-      console.error('❌ Missing transaction reference:', {
-        body: req.body,
-        query: req.query
-      });
+      console.error('Missing transaction reference');
       return res.status(400).json({ error: 'Missing transaction reference' });
     }
-
-    console.log('🌐 Processing payment callback:', { tx_ref, status });
 
     // Immediately acknowledge receipt
     res.status(200).json({ received: true, tx_ref });
@@ -115,7 +106,6 @@ const chapaCallback = async (req, res) => {
       return;
     }
 
-    console.log('Verifying payment for:', tx_ref);
     const verification = await axios.get(
       `https://api.chapa.co/v1/transaction/verify/${tx_ref}`,
       {
@@ -138,39 +128,11 @@ const chapaCallback = async (req, res) => {
           updatedAt: new Date()
         }
       );
-      console.log('✅ Payment verified successfully:', tx_ref);
-    } else {
-      console.error('Payment verification failed:', tx_ref);
-      await Order.updateOne(
-        { _id: tx_ref },
-        { 
-          'paymentDetails.status': 'verification_failed',
-          updatedAt: new Date()
-        }
-      );
     }
 
   } catch (error) {
-    console.error('❌ Callback processing error:', {
-      message: error.message,
-      stack: error.stack,
-      request: {
-        body: req.body,
-        query: req.query
-      }
-    });
-
-    const tx_ref = req.body?.trx_ref || req.query?.tx_ref;
-    if (tx_ref) {
-      await Order.updateOne(
-        { _id: tx_ref },
-        { 
-          'paymentDetails.status': 'errored',
-          'paymentDetails.error': error.message,
-          updatedAt: new Date()
-        }
-      );
-    }
+    console.error('Callback error:', error.message);
+    res.status(500).json({ error: 'Callback processing failed' });
   }
 };
 
