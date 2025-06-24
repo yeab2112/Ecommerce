@@ -2,13 +2,17 @@ import express from 'express';
 import { initiateChapaPayment, chapaCallback } from '../controller/paymentController.js';
 import authenticateUser from '../middleware/user.js';
 
-const paymentRoutes = express.Router();
+const  paymentRoutes = express.Router();
 
-// Payment initiation
+// Initiate payment (authenticated)
 paymentRoutes.post('/chapa', authenticateUser, initiateChapaPayment);
 
-// Callback handler - supports both GET and POST
+// Callback handler (public)
 paymentRoutes.get('/callback', chapaCallback);
-paymentRoutes.post('/callback', chapaCallback);
+paymentRoutes.post('/callback', 
+  express.json(),
+  express.urlencoded({ extended: true }),
+  chapaCallback
+);
 
 export default paymentRoutes;
