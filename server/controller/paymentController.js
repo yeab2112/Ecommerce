@@ -63,45 +63,55 @@ const chapaCallback = async (req, res) => {
 
     console.log("🌐 Chapa callback query:", req.query);
 
+    // Validate tx_ref exists
     if (!tx_ref) {
-      return res.status(400).redirect(`${process.env.FRONTEND_BASE_URL}/payment-error?reason=missing_reference`);
+      return res.redirect(
+        `https://ecommerce-client-lake.vercel.app/order-confirmation/payment-error?reason=missing_reference`
+      );
     }
 
-    // Step 1: If Chapa callback says status is NOT success
+    // Case 1: Initial status check failed
     if (status !== 'success') {
       await Order.findOneAndUpdate(
         { _id: tx_ref },
-        { 'paymentDetails.status': 'failed' },
-        { new: true }
+        { 
+          'paymentDetails.status': 'failed',
+          'updatedAt': new Date()
+        }
       );
-      return res.redirect(`${process.env.FRONTEND_BASE_URL}/payment-failed`);
+      return res.redirect(
+        `https://ecommerce-client-lake.vercel.app/order-confirmation/payment-failed?tx_ref=${tx_ref}`
+      );
     }
 
-    // Step 2: Verify transaction with Chapa API
+    // Case 2: Verify with Chapa API
     const verificationResponse = await axios.get(
       `https://api.chapa.co/v1/transaction/verify/${tx_ref}`,
       {
         headers: {
           Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}`
-        }
+        },
+        timeout: 5000
       }
     );
 
-    console.log("✅ Chapa verification response:", verificationResponse.data);
-
     const verificationData = verificationResponse.data;
 
-    // Step 3: Check if verification failed
-    if (verificationData.status !== 'success') {
+    // Case 3: Verification failed
+    if (verificationData.status !== 'success' || !verificationData.data) {
       await Order.findOneAndUpdate(
         { _id: tx_ref },
-        { 'paymentDetails.status': 'verification_failed' },
-        { new: true }
+        { 
+          'paymentDetails.status': 'verification_failed',
+          'updatedAt': new Date()
+        }
       );
-      return res.redirect(`${process.env.FRONTEND_BASE_URL}/payment-failed`);
+      return res.redirect(
+        `https://ecommerce-client-lake.vercel.app/order-confirmation/payment-failed?reason=verification&tx_ref=${tx_ref}`
+      );
     }
 
-    // Step 4: Update order as successfully paid
+    // Case 4: Success - Update order
     const updatedOrder = await Order.findOneAndUpdate(
       { _id: tx_ref },
       {
@@ -117,34 +127,34 @@ const chapaCallback = async (req, res) => {
     );
 
     if (!updatedOrder) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found with the provided tx_ref'
-      });
+      return res.redirect(
+        `https://ecommerce-client-lake.vercel.app/order-confirmation/payment-error?reason=order_not_found&tx_ref=${tx_ref}`
+      );
     }
 
-    // Step 5: Redirect to order confirmation page
-    return res.redirect(`${process.env.FRONTEND_BASE_URL}/order-confirmation/${updatedOrder._id}`);
+    // Success redirect
+    return res.redirect(
+      `https://ecommerce-client-lake.vercel.app/order-confirmation/${updatedOrder._id}?payment_status=success`
+    );
 
   } catch (error) {
     console.error('❌ Payment callback error:', error.message);
-
-    // Optional: Try to mark order as errored
+    
     try {
       await Order.findOneAndUpdate(
         { _id: req.query.tx_ref },
-        { 'paymentDetails.status': 'verification_error' },
-        { new: true }
+        { 
+          'paymentDetails.status': 'errored',
+          'updatedAt': new Date()
+        }
       );
     } catch (dbError) {
-      console.error('❌ Failed to update payment error status:', dbError.message);
+      console.error('❌ Failed to update order:', dbError.message);
     }
 
-    return res.status(500).json({
-      success: false,
-      message: 'Payment verification failed',
-      error: error.message
-    });
+    return res.redirect(
+      `https://ecommerce-client-lake.vercel.app/order-confirmation/payment-error?reason=server_error&tx_ref=${req.query.tx_ref || 'unknown'}`
+    );
   }
 };
 
