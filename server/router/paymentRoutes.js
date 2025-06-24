@@ -8,8 +8,13 @@ const  paymentRoutes = express.Router();
 paymentRoutes.post('/chapa', authenticateUser, initiateChapaPayment);
 
 // Callback handler (public)
-paymentRoutes.get('/callback', chapaCallback);
+// In your paymentRoutes.js
 paymentRoutes.post('/callback', 
+  express.json(), // Enable JSON body parsing
+  chapaCallback
+);
+
+paymentRoutes.get('/callback', 
   express.json(),
   express.urlencoded({ extended: true }),
   chapaCallback

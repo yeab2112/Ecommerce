@@ -78,30 +78,33 @@ const initiateChapaPayment = async (req, res) => {
 
 const chapaCallback = async (req, res) => {
   try {
-    // Handle both GET (query) and POST (body) requests
-    const tx_ref = req.query.tx_ref || req.body?.tx_ref;
-    const status = req.query.status || req.body?.status;
-
-    console.log("🌐 Chapa callback received:", {
+    // Log complete request for debugging
+    console.log('🔔 Full Callback Request:', {
       method: req.method,
-      tx_ref,
-      status,
       headers: req.headers,
       body: req.body,
       query: req.query
     });
 
-    // Immediately acknowledge receipt to prevent timeout
-    res.status(200).send('Callback received');
+    // Handle both GET (query) and POST (body) formats
+    const tx_ref = req.body?.trx_ref || req.query?.tx_ref;
+    const status = req.body?.status || req.query?.status;
 
     if (!tx_ref) {
-      console.error('❌ Missing transaction reference in callback');
-      return;
+      console.error('❌ Missing transaction reference:', {
+        body: req.body,
+        query: req.query
+      });
+      return res.status(400).json({ error: 'Missing transaction reference' });
     }
+
+    console.log('🌐 Processing payment callback:', { tx_ref, status });
+
+    // Immediately acknowledge receipt
+    res.status(200).json({ received: true, tx_ref });
 
     // Process verification asynchronously
     if (status !== 'success') {
-      console.log('Payment failed for tx_ref:', tx_ref);
       await Order.updateOne(
         { _id: tx_ref },
         { 
@@ -112,19 +115,16 @@ const chapaCallback = async (req, res) => {
       return;
     }
 
-    console.log('Verifying payment for tx_ref:', tx_ref);
+    console.log('Verifying payment for:', tx_ref);
     const verification = await axios.get(
       `https://api.chapa.co/v1/transaction/verify/${tx_ref}`,
       {
-        headers: { 
-          Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}` 
-        },
+        headers: { Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}` },
         timeout: 8000
       }
     );
 
     if (verification.data.status === 'success') {
-      console.log('Payment verified successfully for tx_ref:', tx_ref);
       await Order.updateOne(
         { _id: tx_ref },
         {
@@ -138,8 +138,9 @@ const chapaCallback = async (req, res) => {
           updatedAt: new Date()
         }
       );
+      console.log('✅ Payment verified successfully:', tx_ref);
     } else {
-      console.error('Payment verification failed for tx_ref:', tx_ref);
+      console.error('Payment verification failed:', tx_ref);
       await Order.updateOne(
         { _id: tx_ref },
         { 
@@ -153,10 +154,13 @@ const chapaCallback = async (req, res) => {
     console.error('❌ Callback processing error:', {
       message: error.message,
       stack: error.stack,
-      tx_ref: req.query.tx_ref || req.body?.tx_ref
+      request: {
+        body: req.body,
+        query: req.query
+      }
     });
 
-    const tx_ref = req.query.tx_ref || req.body?.tx_ref;
+    const tx_ref = req.body?.trx_ref || req.query?.tx_ref;
     if (tx_ref) {
       await Order.updateOne(
         { _id: tx_ref },
