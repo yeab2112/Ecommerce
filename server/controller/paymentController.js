@@ -96,7 +96,7 @@ const chapaCallback = async (req, res) => {
 
     // 2. Update with callback data
     await Order.updateOne(
-      { _id: order._id },
+      { 'paymentDetails.shortReference': shortRef },
       {
         $set: {
           'paymentDetails.lastCallback': new Date(),
@@ -114,7 +114,7 @@ const chapaCallback = async (req, res) => {
       );
 
       await Order.updateOne(
-        { _id: order._id },
+      { 'paymentDetails.shortReference': shortRef },
         {
           $set: {
             status: 'processing',
