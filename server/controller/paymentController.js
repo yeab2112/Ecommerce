@@ -78,99 +78,59 @@ const initiateChapaPayment = async (req, res) => {
 
 const chapaCallback = async (req, res) => {
   try {
-    // Log complete request for debugging
-    console.log('🔔 Full Callback Request:', {
-      method: req.method,
-      headers: req.headers,
-      body: req.body,
-      query: req.query
+    const { trx_ref, status } = req.body;
+    
+    // Immediate response to Chapa
+    res.status(200).send('Callback received');
+    
+    // 1. Find order by short reference (last 8 chars of trx_ref)
+    const shortRef = trx_ref.slice(-8);
+    const order = await Order.findOne({ 
+      'paymentDetails.shortReference': shortRef 
     });
-
-    // Handle both GET (query) and POST (body) formats
-    const tx_ref = req.body?.trx_ref || req.query?.tx_ref;
-    const status = req.body?.status || req.query?.status;
-
-    if (!tx_ref) {
-      console.error('❌ Missing transaction reference:', {
-        body: req.body,
-        query: req.query
-      });
-      return res.status(400).json({ error: 'Missing transaction reference' });
-    }
-
-    console.log('🌐 Processing payment callback:', { tx_ref, status });
-
-    // Immediately acknowledge receipt
-    res.status(200).json({ received: true, tx_ref });
-
-    // Process verification asynchronously
-    if (status !== 'success') {
-      await Order.updateOne(
-        { _id: tx_ref },
-        { 
-          'paymentDetails.status': 'failed',
-          updatedAt: new Date()
-        }
-      );
+    
+    if (!order) {
+      console.error('Order not found for reference:', shortRef);
       return;
     }
 
-    console.log('Verifying payment for:', tx_ref);
-    const verification = await axios.get(
-      `https://api.chapa.co/v1/transaction/verify/${tx_ref}`,
+    // 2. Update with callback data
+    await Order.updateOne(
+      { _id: order._id },
       {
-        headers: { Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}` },
-        timeout: 8000
+        $set: {
+          'paymentDetails.lastCallback': new Date(),
+          'paymentDetails.reference': trx_ref,
+          'paymentDetails.status': status === 'success' ? 'completed' : 'failed'
+        }
       }
     );
 
-    if (verification.data.status === 'success') {
+    // 3. Verify payment if successful
+    if (status === 'success') {
+      const verification = await axios.get(
+        `https://api.chapa.co/v1/transaction/verify/${trx_ref}`,
+        { headers: { Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}` } }
+      );
+
       await Order.updateOne(
-        { _id: tx_ref },
+        { _id: order._id },
         {
-          paymentMethod: verification.data.data.payment_method || 'chapa',
-          paymentDetails: {
-            ...verification.data.data,
-            status: 'completed',
-            verifiedAt: new Date()
-          },
-          status: 'processing',
-          updatedAt: new Date()
+          $set: {
+            status: 'processing',
+            'paymentDetails.verification': verification.data,
+            'paymentDetails.status': 'verified',
+            'paymentDetails.method': verification.data.data?.payment_method || 'chapa'
+          }
         }
       );
-      console.log('✅ Payment verified successfully:', tx_ref);
-    } else {
-      console.error('Payment verification failed:', tx_ref);
-      await Order.updateOne(
-        { _id: tx_ref },
-        { 
-          'paymentDetails.status': 'verification_failed',
-          updatedAt: new Date()
-        }
-      );
+      
+      console.log(`Order ${shortRef} verified and paid`);
+      // Trigger fulfillment (email, shipping, etc.)
     }
-
   } catch (error) {
-    console.error('❌ Callback processing error:', {
-      message: error.message,
-      stack: error.stack,
-      request: {
-        body: req.body,
-        query: req.query
-      }
-    });
-
-    const tx_ref = req.body?.trx_ref || req.query?.tx_ref;
-    if (tx_ref) {
-      await Order.updateOne(
-        { _id: tx_ref },
-        { 
-          'paymentDetails.status': 'errored',
-          'paymentDetails.error': error.message,
-          updatedAt: new Date()
-        }
-      );
-    }
+    console.error('Callback processing failed:', error);
+    // Optionally retry or notify admin
   }
 };
 

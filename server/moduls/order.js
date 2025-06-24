@@ -58,9 +58,14 @@ const orderSchema = new mongoose.Schema({
   paymentDetails: {
     status: {
       type: String,
-      enum: ['pending', 'completed', 'failed'],
+      enum: ['pending', 'completed', 'failed', 'verified'],
       default: 'pending'
     },
+    method: String, // 'chapa', 'cod', etc.
+    reference: String, // Chapa's long reference (685a9ee0fd608d37ebb8dd92)
+    shortReference: String, // Your order ID (EBB8DD92)
+    verification: Object, // Raw verification response
+    lastCallback: Date
   },
   items: [orderItemSchema],
   subtotal: { type: Number, required: true },
