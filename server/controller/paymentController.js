@@ -7,6 +7,8 @@ const initiateChapaPayment = async (req, res) => {
   try {
     const { amount, currency, email, first_name, last_name, tx_ref, meta } = req.body;
 
+
+
     // Validate required fields
     if (!amount || !email || !tx_ref) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
