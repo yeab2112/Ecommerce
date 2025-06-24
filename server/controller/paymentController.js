@@ -61,80 +61,61 @@ const initiateChapaPayment = async (req, res) => {
 };
 
 const chapaCallback = async (req, res) => {
+  // Immediately respond to Chapa
+  res.status(200).send('Callback received');
+  
   try {
-    // Handle both GET (query params) and POST (body) requests
-    const tx_ref = req.query.tx_ref || req.body.tx_ref;
-    const status = req.query.status || req.body.status;
+    const { tx_ref, status } = req.query; // GET requests use query params
 
     console.log("🌐 Chapa callback received:", { tx_ref, status });
 
     if (!tx_ref) {
-      console.error('Missing transaction reference in callback');
-      return res.redirect(
-        `https://ecommerce-client-lake.vercel.app/order-confirmation/payment-error?reason=missing_reference`
-      );
+      console.error('Missing transaction reference');
+      return; // Already responded, can't redirect
     }
 
-    // Immediately respond to Chapa to prevent timeout
-    res.status(200).send('Callback received');
-
+    // Process verification asynchronously
     if (status !== 'success') {
-      await Order.findOneAndUpdate(
+      await Order.updateOne(
         { _id: tx_ref },
         { 
           'paymentDetails.status': 'failed',
-          'updatedAt': new Date()
+          updatedAt: new Date()
         }
       );
       return;
     }
 
-    // Verify transaction
-    const verificationResponse = await axios.get(
+    const verification = await axios.get(
       `https://api.chapa.co/v1/transaction/verify/${tx_ref}`,
       {
-        headers: {
-          Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}`
-        },
+        headers: { Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}` },
         timeout: 8000
       }
     );
 
-    const verificationData = verificationResponse.data;
-
-    if (verificationData.status !== 'success' || !verificationData.data) {
-      await Order.findOneAndUpdate(
+    if (verification.data.status === 'success') {
+      await Order.updateOne(
         { _id: tx_ref },
-        { 
-          'paymentDetails.status': 'verification_failed',
-          'updatedAt': new Date()
+        {
+          paymentMethod: verification.data.data.payment_method || 'chapa',
+          paymentDetails: {
+            ...verification.data.data,
+            status: 'completed'
+          },
+          status: 'processing',
+          updatedAt: new Date()
         }
       );
-      return;
     }
-
-    // Update successful payment
-    await Order.findOneAndUpdate(
-      { _id: tx_ref },
-      {
-        paymentMethod: verificationData.data.payment_method || 'chapa',
-        paymentDetails: {
-          ...verificationData.data,
-          status: 'completed'
-        },
-        status: 'processing',
-        updatedAt: new Date()
-      }
-    );
-
   } catch (error) {
-    console.error('❌ Payment callback processing error:', error.message);
-    if (req.query.tx_ref || req.body.tx_ref) {
-      await Order.findOneAndUpdate(
-        { _id: req.query.tx_ref || req.body.tx_ref },
+    console.error('❌ Callback processing error:', error);
+    if (req.query.tx_ref) {
+      await Order.updateOne(
+        { _id: req.query.tx_ref },
         { 
           'paymentDetails.status': 'errored',
-          'updatedAt': new Date()
+          updatedAt: new Date()
         }
       );
     }
