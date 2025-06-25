@@ -43,39 +43,65 @@ const deliveryInfoSchema = new mongoose.Schema({
   phone: { type: String, required: true }
 });
 
+const paymentDetailsSchema = new mongoose.Schema({
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'verified'],
+    default: 'pending'
+  },
+  method: String, // 'chapa', 'cod', etc.
+  reference: String, // Full Chapa tx_ref
+  shortReference: {
+    type: String,
+    index: true // For fast lookup during callback
+  },
+  verification: Object, // Raw response from Chapa verification
+  lastCallback: Date
+});
+
 const orderSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // This references the registered model name
+    ref: 'User',
     required: true
   },
-  deliveryInfo: deliveryInfoSchema,
+  deliveryInfo: {
+    type: deliveryInfoSchema,
+    required: true
+  },
   paymentMethod: {
     type: String,
     enum: ['Cash on Delivery', 'Online Payment'],
     required: true
   },
-  paymentDetails: {
-    status: {
-      type: String,
-      enum: ['pending', 'completed', 'failed', 'verified'],
-      default: 'pending'
-    },
-    method: String, // 'chapa', 'cod', etc.
-    reference: String, // Chapa's long reference (685a9ee0fd608d37ebb8dd92)
-    shortReference: String, // Your order ID (EBB8DD92)
-    verification: Object, // Raw verification response
-    lastCallback: Date
+  paymentDetails: paymentDetailsSchema,
+  items: {
+    type: [orderItemSchema],
+    required: true,
+    validate: v => Array.isArray(v) && v.length > 0
   },
-  items: [orderItemSchema],
-  subtotal: { type: Number, required: true },
-  deliveryFee: { type: Number, required: true },
-  total: { type: Number, required: true },
+  subtotal: {
+    type: Number,
+    required: true
+  },
+  deliveryFee: {
+    type: Number,
+    required: true
+  },
+  total: {
+    type: Number,
+    required: true
+  },
   status: {
     type: String,
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
-  }
+  },
+  isPaid: {
+    type: Boolean,
+    default: false
+  },
+  paidAt: Date
 }, { timestamps: true });
 
 export default mongoose.model('Order', orderSchema);
