@@ -4,7 +4,7 @@ const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { 
     type: String, 
-    unique: true, 
+    unique: true,  // This automatically creates an index
     required: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Invalid email']
   },
@@ -14,6 +14,7 @@ const UserSchema = new mongoose.Schema({
     ref: 'Order',
     validate: {
       validator: async function(orderIds) {
+        if (!orderIds.length) return true;
         const count = await mongoose.model('Order').countDocuments({ 
           _id: { $in: orderIds },
           user: this._id 
@@ -40,8 +41,10 @@ const UserSchema = new mongoose.Schema({
   toObject: { virtuals: true } 
 });
 
-// Indexes for faster queries
-UserSchema.index({ email: 1 });
+// Remove this duplicate index declaration:
+// UserSchema.index({ email: 1 });  // ← Comment out or delete this line
+
+// Keep other indexes
 UserSchema.index({ 'orders': 1 });
 
 // Virtual for order count
