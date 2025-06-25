@@ -80,57 +80,49 @@ const chapaCallback = async (req, res) => {
   try {
     const { trx_ref, status } = req.body;
     
-    // Immediate response to Chapa
+    // Immediately respond to Chapa
     res.status(200).send('Callback received');
     
-    // 1. Find order by short reference (last 8 chars of trx_ref)
-    const shortRef = trx_ref.slice(-8);
+    // 1. Find order by reference
     const order = await Order.findOne({ 
-      'paymentDetails.shortReference': shortRef 
+      'paymentDetails.reference': trx_ref 
     });
     
     if (!order) {
-      console.error('Order not found for reference:', shortRef);
+      console.error('Order not found for reference:', trx_ref);
       return;
     }
 
-    // 2. Update with callback data
-    await Order.updateOne(
-      { 'paymentDetails.shortReference': shortRef },
-      {
-        $set: {
-          'paymentDetails.lastCallback': new Date(),
-          'paymentDetails.reference': trx_ref,
-          'paymentDetails.status': status === 'success' ? 'completed' : 'failed'
-        }
-      }
-    );
+    // 2. Basic status update
+    const updateData = {
+      'paymentDetails.status': status === 'success' ? 'completed' : 'failed',
+      'paymentDetails.lastCallback': new Date()
+    };
 
-    // 3. Verify payment if successful
+    // 3. Only verify if payment succeeded
     if (status === 'success') {
       const verification = await axios.get(
         `https://api.chapa.co/v1/transaction/verify/${trx_ref}`,
         { headers: { Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}` } }
       );
 
-      await Order.updateOne(
-      { 'paymentDetails.shortReference': shortRef },
-        {
-          $set: {
-            status: 'processing',
-            'paymentDetails.verification': verification.data,
-            'paymentDetails.status': 'verified',
-            'paymentDetails.method': verification.data.data?.payment_method || 'chapa'
-          }
-        }
-      );
-      
-      console.log(`Order ${shortRef} verified and paid`);
-      // Trigger fulfillment (email, shipping, etc.)
+      updateData.status = 'processing';
+      updateData['paymentDetails.verification'] = verification.data;
+      updateData['paymentDetails.status'] = 'verified';
+      updateData['paymentDetails.method'] = verification.data.data?.payment_method || 'chapa';
     }
+
+    // 4. Single database update
+    await Order.updateOne(
+      { _id: order._id },
+      { $set: updateData }
+    );
+
+    console.log(`Order ${trx_ref} updated to status: ${status}`);
+
   } catch (error) {
-    console.error('Callback processing failed:', error);
-    // Optionally retry or notify admin
+    console.error('Callback error:', error.message);
+    // Consider retry logic here
   }
 };
 
