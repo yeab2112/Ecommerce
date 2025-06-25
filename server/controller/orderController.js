@@ -62,27 +62,58 @@ const createOrder = async (req, res) => {
 // Get all orders with items for current user
 const getUserOrders = async (req, res) => {
   try {
+    // Validate user ID
+    if (!req.user?._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // Fetch orders with populated product details
     const orders = await Order.find({ user: req.user._id })
-      .sort({ createdAt: -1 })
-      .select('_id orderNumber items total createdAt status')
+      .sort({ createdAt: -1 }) // Newest first
+      .select('_id orderNumber items total createdAt status paymentMethod isPaid deliveryInfo')
+      .populate({
+        path: 'items.product',
+        select: 'name price images slug' // Include essential product details
+      })
       .lean();
 
     if (!orders.length) {
-      return res.status(404).json({
-        success: false,
+      return res.status(200).json({ // 200 instead of 404 for empty lists
+        success: true,
+        orders: [],
         message: 'No orders found'
       });
     }
 
+    // Transform order items for cleaner client response
+    const transformedOrders = orders.map(order => ({
+      ...order,
+      items: order.items.map(item => ({
+        ...item,
+        product: {
+          name: item.product?.name,
+          price: item.product?.price,
+          image: item.product?.images?.[0], // First image
+          slug: item.product?.slug
+        }
+      }))
+    }));
+
     res.json({
       success: true,
-      orders
+      orders: transformedOrders,
+      count: orders.length
     });
+
   } catch (error) {
     console.error('Error fetching orders:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching orders'
+      message: 'Failed to fetch orders',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
