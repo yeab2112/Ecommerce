@@ -1,35 +1,23 @@
 import mongoose from 'mongoose';
 
+// Sub-schemas with _id disabled to reduce overhead
 const orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
     required: true
   },
-  name: {
-    type: String,
-    required: true
-  },
+  name: { type: String, required: true },
   size: {
     type: String,
     required: true,
     enum: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
   },
-  color: {
-    type: String,
-    default: 'default'
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-  price: {
-    type: Number,
-    required: true
-  },
+  color: { type: String, default: 'default' },
+  quantity: { type: Number, required: true, min: 1 },
+  price: { type: Number, required: true },
   image: String
-});
+}, { _id: false });
 
 const deliveryInfoSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
@@ -41,7 +29,7 @@ const deliveryInfoSchema = new mongoose.Schema({
   zipCode: { type: String, required: true },
   country: { type: String, required: true },
   phone: { type: String, required: true }
-});
+}, { _id: false });
 
 const paymentDetailsSchema = new mongoose.Schema({
   status: {
@@ -49,26 +37,21 @@ const paymentDetailsSchema = new mongoose.Schema({
     enum: ['pending', 'completed', 'failed', 'verified'],
     default: 'pending'
   },
-  method: String, // 'chapa', 'cod', etc.
-  reference: String, // Full Chapa tx_ref
-  shortReference: {
-    type: String,
-    index: true // For fast lookup during callback
-  },
-  verification: Object, // Raw response from Chapa verification
+  method: String,
+  reference: String,
+  shortReference: String,  // Removed index:true here (define at schema level)
+  verification: Object,
   lastCallback: Date
-});
+}, { _id: false });
 
 const orderSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true  // Define index here instead of in middleware
   },
-  deliveryInfo: {
-    type: deliveryInfoSchema,
-    required: true
-  },
+  deliveryInfo: { type: deliveryInfoSchema, required: true },
   paymentMethod: {
     type: String,
     enum: ['Cash on Delivery', 'Online Payment'],
@@ -78,30 +61,35 @@ const orderSchema = new mongoose.Schema({
   items: {
     type: [orderItemSchema],
     required: true,
-    validate: v => Array.isArray(v) && v.length > 0
+    validate: {
+      validator: v => Array.isArray(v) && v.length > 0,
+      message: 'Order must contain at least one item'
+    }
   },
-  subtotal: {
-    type: Number,
-    required: true
-  },
-  deliveryFee: {
-    type: Number,
-    required: true
-  },
-  total: {
-    type: Number,
-    required: true
-  },
+  subtotal: { type: Number, required: true },
+  deliveryFee: { type: Number, required: true },
+  total: { type: Number, required: true },
   status: {
     type: String,
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
-    default: 'pending'
+    default: 'pending',
+    index: true  // Index for faster status queries
   },
-  isPaid: {
-    type: Boolean,
-    default: false
-  },
+  isPaid: { type: Boolean, default: false },
   paidAt: Date
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Define indexes at schema level (prevents duplicate indexes)
+orderSchema.index({ 'paymentDetails.shortReference': 1 }); // For callback lookups
+orderSchema.index({ createdAt: -1 }); // For sorting recent orders
+
+// Virtual for order number
+orderSchema.virtual('orderNumber').get(function() {
+  return `ORD-${this._id.toString().slice(-8).toUpperCase()}`;
+});
 
 export default mongoose.model('Order', orderSchema);
