@@ -5,61 +5,135 @@ import mongoose from 'mongoose';
 // ===================== GET CART =====================
 const getCart = async (req, res) => {
   try {
-    const user = await UserModel.findById(req.user._id).select('cartdata').lean();
+    // 1. Fetch user with only cartdata
+    const user = await UserModel.findById(req.user._id)
+      .select('cartdata')
+      .lean();
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
     }
 
-    if (!user.cartdata) {
-      return res.status(200).json({ success: true, cartdata: {} });
+    // 2. Handle empty cart case
+    if (!user.cartdata || Object.keys(user.cartdata).length === 0) {
+      return res.status(200).json({ 
+        success: true, 
+        cartdata: {} 
+      });
     }
 
-    // Extract productIds
-    const productIds = Object.values(user.cartdata)
-      .map(item => item?.product || item?.productId) // Handle both cases
-      .filter(productId => productId && mongoose.Types.ObjectId.isValid(productId));
-
-    const products = await Product.find({ _id: { $in: productIds } }).select('name price images');
-    const productMap = {};
-    products.forEach(product => {
-      productMap[product._id.toString()] = product;
+    // 3. Extract and validate product IDs
+    const productIds = [];
+    const cartKeys = Object.keys(user.cartdata);
+    
+    cartKeys.forEach(cartKey => {
+      const item = user.cartdata[cartKey];
+      if (!item) return;
+      
+      const productId = item.product || item.productId;
+      if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+        productIds.push(productId);
+      }
     });
 
-    // Build structured cart
+    // 4. Early return if no valid products
+    if (productIds.length === 0) {
+      return res.status(200).json({ 
+        success: true, 
+        cartdata: {} 
+      });
+    }
+
+    // 5. Fetch products in single query with projection
+    const products = await Product.find({ 
+      _id: { $in: productIds } 
+    }).select('name price images stock slug').lean();
+
+    // 6. Create product map for quick lookup
+    const productMap = products.reduce((map, product) => {
+      map[product._id.toString()] = product;
+      return map;
+    }, {});
+
+    // 7. Build structured cart data
     const cartdata = {};
-    Object.entries(user.cartdata).forEach(([cartKey, cartItem]) => {
-      if (!cartItem || (!cartItem.product && !cartItem.productId)) return;
+    let hasInvalidItems = false;
+
+    cartKeys.forEach(cartKey => {
+      const cartItem = user.cartdata[cartKey];
+      if (!cartItem) return;
 
       try {
         const productId = (cartItem.product || cartItem.productId).toString();
         const product = productMap[productId];
 
+        // Skip if product doesn't exist
+        if (!product) {
+          hasInvalidItems = true;
+          return;
+        }
+
+        // Parse cart key components (productId_size_color)
         const [parsedProductId, size, color] = cartKey.split('_');
 
         cartdata[cartKey] = {
-          productId: cartItem.product || cartItem.productId,
-          size,
-          color,
-          quantity: cartItem.quantity || 1,
-          price: cartItem.price || product?.price || 0,
-          name: product?.name || 'Unknown Product',
-          image: product?.images?.[0] || '',
+          productId,
+          size: size || '',
+          color: color || '',
+          quantity: Math.max(1, cartItem.quantity || 1),
+          price: cartItem.price || product.price || 0,
+          name: product.name,
+          image: product.images?.[0] || '',
+          stock: product.stock || 0,
+          slug: product.slug || '',
           lastUpdated: cartItem.lastUpdated || cartItem.addedAt || new Date()
         };
+
+        // Auto-correct quantity if exceeds stock
+        if (product.stock && cartdata[cartKey].quantity > product.stock) {
+          cartdata[cartKey].quantity = product.stock;
+          hasInvalidItems = true;
+        }
+
       } catch (err) {
-        console.error('Error processing cart item:', cartKey, err);
+        console.error(`Error processing cart item ${cartKey}:`, err);
+        hasInvalidItems = true;
       }
     });
 
-    res.status(200).json({ success: true, cartdata });
+    // 8. Clean invalid items if needed
+    if (hasInvalidItems) {
+      await UserModel.updateOne(
+        { _id: req.user._id },
+        { $set: { cartdata } }
+      );
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      cartdata,
+      ...(hasInvalidItems && { 
+        message: 'Some items were adjusted due to availability changes' 
+      })
+    });
 
   } catch (error) {
-    console.error('Error fetching cart:', error);
+    console.error('Error fetching cart:', {
+      userId: req.user?._id,
+      error: error.message,
+      stack: error.stack
+    });
+    
     res.status(500).json({
       success: false,
       message: 'Failed to load cart',
-      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+      ...(process.env.NODE_ENV === 'development' && { 
+        error: error.message,
+        stack: error.stack 
+      })
     });
   }
 };
