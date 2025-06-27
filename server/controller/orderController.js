@@ -37,8 +37,13 @@ const createOrder = async (req, res) => {
       total,
       status: 'pending',
       paymentDetails: {
-        status: paymentMethod === 'Online Payment' ? 'pending' : 'completed'
-      }
+  status: paymentMethod === 'Online Payment' ? 'pending' : 'completed',
+  method: null,
+  reference: null,
+  shortReference: null,
+  verification: null,
+  lastCallback: null
+}
     });
 
     const savedOrder = await order.save();

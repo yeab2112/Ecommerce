@@ -37,11 +37,11 @@ const paymentDetailsSchema = new mongoose.Schema({
     enum: ['pending', 'completed', 'failed', 'verified'],
     default: 'pending'
   },
-  method: String,
-  reference: String,
-  shortReference: String,  // Removed index:true here (define at schema level)
-  verification: Object,
-  lastCallback: Date
+  method: { type: String, default: null },
+  reference: { type: String, default: null },
+  shortReference: { type: String, default: null },
+  verification: { type: Object, default: null },
+  lastCallback: { type: Date, default: null }
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
