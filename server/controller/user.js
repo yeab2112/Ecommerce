@@ -119,11 +119,10 @@ const AdminLogin = async (req, res) => {
   }
 };
 
-
 const getCurrentUser = async (req, res) => {
   try {
-    // 1. Find user without populating first (more efficient for initial check)
-    const user = await UserModel.findById(req.user._id);
+    // 1. Initial user fetch without population
+    const user = await UserModel.findById(req.user._id).select('orders');
     
     if (!user) {
       return res.status(404).json({ 
@@ -132,8 +131,8 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
-    // 2. Verify data consistency between user.orders and actual orders
-    const [directOrders, populatedUser] = await Promise.all([
+    // 2. Parallel fetch for data consistency check
+    const [dbOrders, populatedUser] = await Promise.all([
       Order.find({ user: req.user._id }).select('_id').lean(),
       UserModel.findById(req.user._id).populate({
         path: 'orders',
@@ -142,55 +141,62 @@ const getCurrentUser = async (req, res) => {
       })
     ]);
 
-    const dbOrderCount = directOrders.length;
+    // 3. Data consistency verification
+    const dbOrderCount = dbOrders.length;
     const userOrderRefs = user.orders?.length || 0;
     const populatedOrderCount = populatedUser.orders?.length || 0;
 
-    console.log(`Data check: User references ${userOrderRefs} orders, ` +
-               `found ${dbOrderCount} in database, ` +
-               `${populatedOrderCount} populated`);
+    console.log(`Data consistency: ${userOrderRefs} user refs | ${dbOrderCount} DB orders | ${populatedOrderCount} populated`);
 
-    // 3. Repair reference mismatch if needed
+    // 4. Repair reference mismatch if needed
     if (userOrderRefs !== dbOrderCount) {
-      console.log(`Repairing ${Math.abs(dbOrderCount - userOrderRefs)} order references`);
+      console.log(`Repairing ${dbOrderCount - userOrderRefs} order references`);
       
-      // Update user's order references
       await UserModel.findByIdAndUpdate(
         req.user._id,
-        { $set: { orders: directOrders.map(o => o._id) } }
+        { $set: { orders: dbOrders.map(o => o._id) } },
+        { new: true }
       );
     }
 
-    // 4. Final population (after potential repair)
-    const finalUser = await UserModel.findById(req.user._id).populate({
-      path: 'orders',
-      select: 'deliveryInfo items total createdAt status paymentMethod',
-      options: { sort: { createdAt: -1 } }
-    });
+    // 5. Final population after potential repair
+    const finalUser = await UserModel.findById(req.user._id)
+      .populate({
+        path: 'orders',
+        select: 'deliveryInfo items total createdAt status paymentMethod',
+        options: { sort: { createdAt: -1 } }
+      });
+
+    // 6. Prepare response
+    const response = {
+      _id: finalUser._id,
+      name: finalUser.name,
+      email: finalUser.email,
+      orders: finalUser.orders || []
+    };
 
     res.status(200).json({
       success: true,
-      user: {
-        _id: finalUser._id,
-        name: finalUser.name,
-        email: finalUser.email,
-        // Include other user fields you need
-        orders: finalUser.orders || []
-      }
+      user: response,
+      ...(userOrderRefs !== dbOrderCount && {
+        message: 'Order references were automatically repaired'
+      })
     });
 
   } catch (error) {
-    console.error('User fetch error:', {
+    console.error('User data fetch failed:', {
       error: error.message,
-      stack: error.stack,
       userId: req.user?._id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
     
     res.status(500).json({
       success: false,
       message: 'Failed to load user data',
-      systemMessage: process.env.NODE_ENV === 'development' ? error.message : undefined
+      ...(process.env.NODE_ENV === 'development' && {
+        error: error.message
+      })
     });
   }
 };
