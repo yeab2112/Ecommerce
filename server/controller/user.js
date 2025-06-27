@@ -122,53 +122,83 @@ const AdminLogin = async (req, res) => {
 
 const getCurrentUser = async (req, res) => {
   try {
-    // 1. Initial user fetch
-    const user = await UserModel.findById(req.user._id);
+    // Debug: Log initial state
+    console.log(`[DEBUG] Starting user fetch for ${req.user._id}`);
+
+    // 1. Initial user fetch with session for transaction safety
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
+    const user = await UserModel.findById(req.user._id).session(session);
     if (!user) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // 2. Verify order references
+    // 2. Verify order references with transaction
     const [dbOrders, validOrderRefs] = await Promise.all([
-      Order.find({ user: req.user._id }).select('_id').lean(),
+      Order.find({ user: req.user._id }).select('_id').session(session).lean(),
       Order.find({ 
         _id: { $in: user.orders || [] },
-        user: req.user._id  // Additional security check
-      }).select('_id').lean()
+        user: req.user._id
+      }).select('_id').session(session).lean()
     ]);
 
-    // 3. Data consistency check
+    // Debug: Log raw data
+    console.log(`[DEBUG] Raw orders - DB: ${dbOrders.length} | Valid: ${validOrderRefs.length}`);
+
+    // 3. Data consistency check with detailed logging
     const dbOrderIds = dbOrders.map(o => o._id.toString());
     const userOrderIds = user.orders?.map(o => o.toString()) || [];
     const validOrderIds = validOrderRefs.map(o => o._id.toString());
 
-    console.log(`Data check: 
-      User references: ${userOrderIds.length} 
-      Valid orders: ${validOrderIds.length}
-      DB orders: ${dbOrderIds.length}`);
+    const missingFromUser = dbOrderIds.filter(id => !userOrderIds.includes(id));
+    const invalidReferences = userOrderIds.filter(id => !validOrderIds.includes(id));
 
-    // 4. Repair logic
-    if (validOrderIds.length !== dbOrderIds.length) {
-      console.log(`Repairing ${dbOrderIds.length - validOrderIds.length} order references`);
-      
-      // Remove invalid references and add missing ones
-      const newOrderRefs = [...new Set([
-        ...validOrderIds.filter(id => dbOrderIds.includes(id)),
-        ...dbOrderIds
-      ])].map(id => new mongoose.Types.ObjectId(id));
+    console.log(`[REPAIR AUDIT] 
+      Missing from user: ${missingFromUser.join(', ')}
+      Invalid references: ${invalidReferences.join(', ')}`);
 
-      await UserModel.findByIdAndUpdate(
-        req.user._id,
-        { $set: { orders: newOrderRefs } }
-      );
+    // 4. Enhanced repair logic with transaction
+    if (missingFromUser.length > 0 || invalidReferences.length > 0) {
+      try {
+        console.log(`[REPAIR] Adding ${missingFromUser.length} orders, removing ${invalidReferences.length} invalid refs`);
+        
+        const newOrderRefs = [
+          ...userOrderIds.filter(id => validOrderIds.includes(id)),
+          ...missingFromUser
+        ].map(id => new mongoose.Types.ObjectId(id));
+
+        await UserModel.findByIdAndUpdate(
+          req.user._id,
+          { $set: { orders: newOrderRefs } },
+          { session }
+        );
+
+        await session.commitTransaction();
+        console.log('[REPAIR] Transaction committed successfully');
+      } catch (repairError) {
+        await session.abortTransaction();
+        console.error('[REPAIR FAILED]', repairError);
+        throw repairError;
+      } finally {
+        session.endSession();
+      }
+    } else {
+      await session.abortTransaction();
+      session.endSession();
     }
 
-    // 5. Final population
+    // 5. Final population with fresh data
     const finalUser = await UserModel.findById(req.user._id).populate({
       path: 'orders',
       select: 'deliveryInfo items total createdAt status paymentMethod',
       options: { sort: { createdAt: -1 } }
     });
+
+    // Debug: Verify repair
+    console.log(`[POST-REPAIR] Final order count: ${finalUser.orders?.length || 0}`);
 
     res.status(200).json({
       success: true,
@@ -176,18 +206,26 @@ const getCurrentUser = async (req, res) => {
         ...finalUser.toObject(),
         orders: finalUser.orders || []
       },
-      repaired: validOrderIds.length !== dbOrderIds.length
+      metadata: {
+        repaired: missingFromUser.length + invalidReferences.length,
+        added: missingFromUser.length,
+        removed: invalidReferences.length
+      }
     });
 
   } catch (error) {
-    console.error('User fetch error:', {
+    console.error('[FATAL ERROR]', {
+      path: '/api/user/me',
       error: error.message,
+      stack: error.stack,
       userId: req.user?._id,
       timestamp: new Date().toISOString()
     });
+    
     res.status(500).json({
       success: false,
-      message: 'Failed to load user data'
+      message: 'Failed to load user data',
+      reference: 'USER_FETCH_ERROR'
     });
   }
 };
