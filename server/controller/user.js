@@ -121,82 +121,72 @@ const AdminLogin = async (req, res) => {
 
 const getCurrentUser = async (req, res) => {
   try {
-    // 1. Initial user fetch without population
-    const user = await UserModel.findById(req.user._id).select('orders');
-    
+    // 1. Initial user fetch
+    const user = await UserModel.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // 2. Parallel fetch for data consistency check
-    const [dbOrders, populatedUser] = await Promise.all([
+    // 2. Verify order references
+    const [dbOrders, validOrderRefs] = await Promise.all([
       Order.find({ user: req.user._id }).select('_id').lean(),
-      UserModel.findById(req.user._id).populate({
-        path: 'orders',
-        select: 'deliveryInfo items total createdAt status paymentMethod',
-        options: { sort: { createdAt: -1 } }
-      })
+      Order.find({ 
+        _id: { $in: user.orders || [] },
+        user: req.user._id  // Additional security check
+      }).select('_id').lean()
     ]);
 
-    // 3. Data consistency verification
-    const dbOrderCount = dbOrders.length;
-    const userOrderRefs = user.orders?.length || 0;
-    const populatedOrderCount = populatedUser.orders?.length || 0;
+    // 3. Data consistency check
+    const dbOrderIds = dbOrders.map(o => o._id.toString());
+    const userOrderIds = user.orders?.map(o => o.toString()) || [];
+    const validOrderIds = validOrderRefs.map(o => o._id.toString());
 
-    console.log(`Data consistency: ${userOrderRefs} user refs | ${dbOrderCount} DB orders | ${populatedOrderCount} populated`);
+    console.log(`Data check: 
+      User references: ${userOrderIds.length} 
+      Valid orders: ${validOrderIds.length}
+      DB orders: ${dbOrderIds.length}`);
 
-    // 4. Repair reference mismatch if needed
-    if (userOrderRefs !== dbOrderCount) {
-      console.log(`Repairing ${dbOrderCount - userOrderRefs} order references`);
+    // 4. Repair logic
+    if (validOrderIds.length !== dbOrderIds.length) {
+      console.log(`Repairing ${dbOrderIds.length - validOrderIds.length} order references`);
       
+      // Remove invalid references and add missing ones
+      const newOrderRefs = [...new Set([
+        ...validOrderIds.filter(id => dbOrderIds.includes(id)),
+        ...dbOrderIds
+      ])].map(id => new mongoose.Types.ObjectId(id));
+
       await UserModel.findByIdAndUpdate(
         req.user._id,
-        { $set: { orders: dbOrders.map(o => o._id) } },
-        { new: true }
+        { $set: { orders: newOrderRefs } }
       );
     }
 
-    // 5. Final population after potential repair
-    const finalUser = await UserModel.findById(req.user._id)
-      .populate({
-        path: 'orders',
-        select: 'deliveryInfo items total createdAt status paymentMethod',
-        options: { sort: { createdAt: -1 } }
-      });
-
-    // 6. Prepare response
-    const response = {
-      _id: finalUser._id,
-      name: finalUser.name,
-      email: finalUser.email,
-      orders: finalUser.orders || []
-    };
+    // 5. Final population
+    const finalUser = await UserModel.findById(req.user._id).populate({
+      path: 'orders',
+      select: 'deliveryInfo items total createdAt status paymentMethod',
+      options: { sort: { createdAt: -1 } }
+    });
 
     res.status(200).json({
       success: true,
-      user: response,
-      ...(userOrderRefs !== dbOrderCount && {
-        message: 'Order references were automatically repaired'
-      })
+      user: {
+        ...finalUser.toObject(),
+        orders: finalUser.orders || []
+      },
+      repaired: validOrderIds.length !== dbOrderIds.length
     });
 
   } catch (error) {
-    console.error('User data fetch failed:', {
+    console.error('User fetch error:', {
       error: error.message,
       userId: req.user?._id,
-      timestamp: new Date().toISOString(),
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      timestamp: new Date().toISOString()
     });
-    
     res.status(500).json({
       success: false,
-      message: 'Failed to load user data',
-      ...(process.env.NODE_ENV === 'development' && {
-        error: error.message
-      })
+      message: 'Failed to load user data'
     });
   }
 };
