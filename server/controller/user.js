@@ -121,111 +121,150 @@ const AdminLogin = async (req, res) => {
 };
 
 const getCurrentUser = async (req, res) => {
+  const auditLog = {
+    userId: req.user._id,
+    startTime: new Date(),
+    actions: []
+  };
+
   try {
-    // Debug: Log initial state
-    console.log(`[DEBUG] Starting user fetch for ${req.user._id}`);
-
-    // 1. Initial user fetch with session for transaction safety
+    // 1. Initialize session with retry logic
     const session = await mongoose.startSession();
-    session.startTransaction();
-    
-    const user = await UserModel.findById(req.user._id).session(session);
-    if (!user) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
+    let attempt = 0;
+    const maxAttempts = 3;
 
-    // 2. Verify order references with transaction
-    const [dbOrders, validOrderRefs] = await Promise.all([
-      Order.find({ user: req.user._id }).select('_id').session(session).lean(),
-      Order.find({ 
-        _id: { $in: user.orders || [] },
-        user: req.user._id
-      }).select('_id').session(session).lean()
-    ]);
+    while (attempt < maxAttempts) {
+      attempt++;
+      session.startTransaction();
+      auditLog.attempt = attempt;
 
-    // Debug: Log raw data
-    console.log(`[DEBUG] Raw orders - DB: ${dbOrders.length} | Valid: ${validOrderRefs.length}`);
-
-    // 3. Data consistency check with detailed logging
-    const dbOrderIds = dbOrders.map(o => o._id.toString());
-    const userOrderIds = user.orders?.map(o => o.toString()) || [];
-    const validOrderIds = validOrderRefs.map(o => o._id.toString());
-
-    const missingFromUser = dbOrderIds.filter(id => !userOrderIds.includes(id));
-    const invalidReferences = userOrderIds.filter(id => !validOrderIds.includes(id));
-
-    console.log(`[REPAIR AUDIT] 
-      Missing from user: ${missingFromUser.join(', ')}
-      Invalid references: ${invalidReferences.join(', ')}`);
-
-    // 4. Enhanced repair logic with transaction
-    if (missingFromUser.length > 0 || invalidReferences.length > 0) {
       try {
-        console.log(`[REPAIR] Adding ${missingFromUser.length} orders, removing ${invalidReferences.length} invalid refs`);
-        
-        const newOrderRefs = [
-          ...userOrderIds.filter(id => validOrderIds.includes(id)),
-          ...missingFromUser
-        ].map(id => new mongoose.Types.ObjectId(id));
+        // 2. Fetch user with consistency checks
+        const user = await UserModel.findById(req.user._id)
+          .session(session)
+          .setOptions({ lean: true });
 
-        await UserModel.findByIdAndUpdate(
-          req.user._id,
-          { $set: { orders: newOrderRefs } },
-          { session }
-        );
+        if (!user) {
+          await session.abortTransaction();
+          auditLog.actions.push('user_not_found');
+          return res.status(404).json({ 
+            success: false, 
+            message: 'User not found',
+            auditId: auditLog._id
+          });
+        }
+
+        // 3. Parallel data validation
+        const [dbOrders, validRefs] = await Promise.all([
+          Order.find({ user: req.user._id })
+            .select('_id')
+            .session(session)
+            .lean(),
+          Order.find({
+            _id: { $in: user.orders || [] },
+            user: req.user._id
+          })
+          .select('_id')
+          .session(session)
+          .lean()
+        ]);
+
+        // 4. Identify discrepancies
+        const dbOrderIds = new Set(dbOrders.map(o => o._id.toString()));
+        const userOrderIds = new Set(user.orders?.map(o => o.toString()) || []);
+        const validOrderIds = new Set(validRefs.map(o => o._id.toString()));
+
+        const missingFromUser = [...dbOrderIds].filter(id => !userOrderIds.has(id));
+        const invalidRefs = [...userOrderIds].filter(id => !validOrderIds.has(id));
+
+        auditLog.stats = {
+          dbOrders: dbOrderIds.size,
+          userRefs: userOrderIds.size,
+          validRefs: validOrderIds.size,
+          missing: missingFromUser.length,
+          invalid: invalidRefs.length
+        };
+
+        // 5. Conditional repair
+        if (missingFromUser.length > 0 || invalidRefs.length > 0) {
+          const newRefs = [
+            ...validRefs.map(o => o._id),
+            ...missingFromUser.map(id => new mongoose.Types.ObjectId(id))
+          ];
+
+          await UserModel.findByIdAndUpdate(
+            req.user._id,
+            { $set: { orders: newRefs } },
+            { session }
+          );
+
+          auditLog.actions.push({
+            type: 'reference_repair',
+            added: missingFromUser,
+            removed: invalidRefs
+          });
+        }
+
+        // 6. Final data fetch
+        const finalUser = await UserModel.findById(req.user._id)
+          .populate({
+            path: 'orders',
+            select: 'deliveryInfo items total createdAt status paymentMethod',
+            options: { sort: { createdAt: -1 } }
+          })
+          .session(session)
+          .lean();
 
         await session.commitTransaction();
-        console.log('[REPAIR] Transaction committed successfully');
-      } catch (repairError) {
+        auditLog.status = 'success';
+        auditLog.endTime = new Date();
+
+        // Log audit trail (consider storing in DB)
+        console.log('[AUDIT]', JSON.stringify(auditLog, null, 2));
+
+        return res.status(200).json({
+          success: true,
+          user: {
+            ...finalUser,
+            orders: finalUser.orders || []
+          },
+          audit: {
+            id: auditLog._id,
+            repaired: auditLog.actions.length > 0
+          }
+        });
+
+      } catch (operationError) {
         await session.abortTransaction();
-        console.error('[REPAIR FAILED]', repairError);
-        throw repairError;
+        
+        if (attempt === maxAttempts) {
+          throw operationError;
+        }
+
+        // Exponential backoff
+        await new Promise(resolve => 
+          setTimeout(resolve, 100 * Math.pow(2, attempt))
+        );
+        continue;
       } finally {
         session.endSession();
       }
-    } else {
-      await session.abortTransaction();
-      session.endSession();
     }
-
-    // 5. Final population with fresh data
-    const finalUser = await UserModel.findById(req.user._id).populate({
-      path: 'orders',
-      select: 'deliveryInfo items total createdAt status paymentMethod',
-      options: { sort: { createdAt: -1 } }
-    });
-
-    // Debug: Verify repair
-    console.log(`[POST-REPAIR] Final order count: ${finalUser.orders?.length || 0}`);
-
-    res.status(200).json({
-      success: true,
-      user: {
-        ...finalUser.toObject(),
-        orders: finalUser.orders || []
-      },
-      metadata: {
-        repaired: missingFromUser.length + invalidReferences.length,
-        added: missingFromUser.length,
-        removed: invalidReferences.length
-      }
-    });
-
   } catch (error) {
-    console.error('[FATAL ERROR]', {
-      path: '/api/user/me',
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?._id,
-      timestamp: new Date().toISOString()
-    });
-    
-    res.status(500).json({
+    auditLog.status = 'failed';
+    auditLog.error = {
+      message: error.message,
+      stack: error.stack
+    };
+    auditLog.endTime = new Date();
+
+    console.error('[FATAL]', JSON.stringify(auditLog, null, 2));
+
+    return res.status(500).json({
       success: false,
       message: 'Failed to load user data',
-      reference: 'USER_FETCH_ERROR'
+      auditId: auditLog._id,
+      reference: 'USER_FETCH_FAILURE'
     });
   }
 };
