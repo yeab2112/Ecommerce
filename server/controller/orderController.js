@@ -46,7 +46,13 @@ const createOrder = async (req, res) => {
 }
     });
 
-    const savedOrder = await order.save();
+    // 1. Initial save creates the order with null reference
+const savedOrder = await order.save(); 
+
+// 2. Update just the reference field
+savedOrder.paymentDetails.reference = savedOrder._id;
+savedOrder.markModified('paymentDetails');
+await savedOrder.save();
 
     // Update user's cart
     await UserModel.findByIdAndUpdate(userId, { $set: { cartdata: {} } });
