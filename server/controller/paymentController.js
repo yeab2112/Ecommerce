@@ -78,8 +78,15 @@ const initiateChapaPayment = async (req, res) => {
 
 const chapaCallback = async (req, res) => {
   try {
+    console.log('Received callback body:', req.body); // Log the entire request body
+    
     const { trx_ref, status } = req.body;
     
+    if (!trx_ref) {
+      console.error('Missing transaction reference in callback');
+      return res.status(400).send('Missing transaction reference');
+    }
+
     // Immediately respond to Chapa
     res.status(200).send('Callback received');
     
@@ -93,14 +100,19 @@ const chapaCallback = async (req, res) => {
       return;
     }
 
+    console.log(`Found order ${order._id} with current status: ${order.paymentDetails.status}`);
+
     // 2. Basic status update
     const updateData = {
       'paymentDetails.status': status === 'success' ? 'completed' : 'failed',
       'paymentDetails.lastCallback': new Date()
     };
 
+    console.log('Preparing update data:', updateData);
+
     // 3. Only verify if payment succeeded
     if (status === 'success') {
+      console.log('Initiating verification for successful payment');
       const verification = await axios.get(
         `https://api.chapa.co/v1/transaction/verify/${trx_ref}`,
         { headers: { Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}` } }
@@ -110,18 +122,22 @@ const chapaCallback = async (req, res) => {
       updateData['paymentDetails.verification'] = verification.data;
       updateData['paymentDetails.status'] = 'verified';
       updateData['paymentDetails.method'] = verification.data.data?.payment_method || 'chapa';
+      
+      console.log('Verification data received:', verification.data);
     }
 
     // 4. Single database update
-    await Order.updateOne(
+    const updateResult = await Order.updateOne(
       { _id: order._id },
       { $set: updateData }
     );
 
+    console.log(`Update result for order ${trx_ref}:`, updateResult);
     console.log(`Order ${trx_ref} updated to status: ${status}`);
 
   } catch (error) {
     console.error('Callback error:', error.message);
+    console.error('Error stack:', error.stack);
     // Consider retry logic here
   }
 };
