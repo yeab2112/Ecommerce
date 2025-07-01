@@ -55,6 +55,7 @@ function PlaceOrder() {
         }
       }
     );
+const paymentReference = orderResponse.data.paymentReference;
 
     // Debugging logs - corrected
     console.log("Full order response:", orderResponse);
@@ -75,7 +76,7 @@ function PlaceOrder() {
       email: deliveryInfo.email,
       first_name: deliveryInfo.firstName.substring(0, 50), // Chapa has length limits
       last_name: deliveryInfo.lastName.substring(0, 50),
-      tx_ref: order._id, // Use the correct order ID
+      tx_ref: paymentReference, // Use the correct order ID
       meta: {
         order_id: order._id
       }

@@ -1,4 +1,6 @@
 import Order from "../moduls/order.js";
+import { v4 as uuidv4 } from 'uuid';
+import dotenv from "dotenv"
 import { notifyAdmin } from "./notificationsController.js"
 import UserModel from "../moduls/user.js";
 // Create a new order
@@ -6,6 +8,7 @@ const createOrder = async (req, res) => {
   try {
     const { deliveryInfo, paymentMethod, items, subtotal, deliveryFee, total } = req.body;
     const userId = req.user._id;
+    const tx_ref = `CHAPA_${uuidv4()}`; // Generate unique reference
 
     // Validation
     const requiredFields = ['firstName', 'lastName', 'email', 'address', 'city', 'country', 'phone'];
@@ -18,7 +21,7 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Create order
+    // Create order with the generated reference
     const order = new Order({
       user: userId,
       deliveryInfo,
@@ -37,29 +40,24 @@ const createOrder = async (req, res) => {
       total,
       status: 'pending',
       paymentDetails: {
-  status: paymentMethod === 'Online Payment' ? 'pending' : 'completed',
-  method: null,
-  reference: null,
-  shortReference: null,
-  verification: null,
-  lastCallback: null
-}
+        status: paymentMethod === 'Online Payment' ? 'pending' : 'completed',
+        method: null,
+        reference: tx_ref, // Using the generated reference
+        shortReference: tx_ref.slice(-8), // Last 8 chars for display
+        verification: null,
+        lastCallback: null
+      }
     });
 
-    // 1. Initial save creates the order with null reference
-const savedOrder = await order.save(); 
-
-// 2. Update just the reference field
-savedOrder.paymentDetails.reference = savedOrder._id;
-savedOrder.markModified('paymentDetails');
-await savedOrder.save();
+    const savedOrder = await order.save();
 
     // Update user's cart
     await UserModel.findByIdAndUpdate(userId, { $set: { cartdata: {} } });
 
     res.status(201).json({
       success: true,
-      order: savedOrder
+      order: savedOrder,
+      paymentReference: savedOrder.paymentDetails.reference // Explicitly return the reference
     });
 
   } catch (error) {
@@ -69,8 +67,7 @@ await savedOrder.save();
       message: 'Internal server error'
     });
   }
-};
-// Get all orders with items for current user
+}
 const getUserOrders = async (req, res) => {
   try {
     // Validate user ID
