@@ -107,6 +107,7 @@ const chapaCallback = async (req, res) => {
       );
 
       updateData.status = 'processing';
+      updateData.isPaid= true;
       updateData['paymentDetails.verification'] = verification.data;
       updateData['paymentDetails.status'] = 'verified';
       updateData['paymentDetails.method'] = verification.data.data?.payment_method || 'chapa';
