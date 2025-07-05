@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
-
+const trackingSchema = new mongoose.Schema({
+  carrier: { type: String, default: 'Not specified' },
+  trackingNumber: { type: String, default: 'Not available' },
+  updatedAt: { type: Date, default: Date.now }
+}, { _id: false });
 // Sub-schemas with _id disabled to reduce overhead
 const orderItemSchema = new mongoose.Schema({
   product: {
@@ -52,6 +56,10 @@ const orderSchema = new mongoose.Schema({
     index: true  // Define index here instead of in middleware
   },
   deliveryInfo: { type: deliveryInfoSchema, required: true },
+  tracking:{
+    type:trackingSchema,
+    default:{}
+  },
   paymentMethod: {
     type: String,
     enum: ['Cash on Delivery', 'Online Payment'],
