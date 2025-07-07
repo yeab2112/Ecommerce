@@ -139,56 +139,94 @@ function OrderConfirmation() {
     }
   };
 
-  const handleSubmitReview = async () => {
-    if (!currentReviewProduct || !currentOrderId) return;
-    setIsSubmittingReview(true);
+const handleSubmitReview = async () => {
+  // Validate we have required data before proceeding
+  if (!currentReviewProduct || !currentOrderId) {
+    console.error('Missing review data:', { currentReviewProduct, currentOrderId });
+    toast.error('Unable to submit review - missing product or order information');
+    return;
+  }
 
-    try {
-      const response = await axios.post(
-        'https://ecommerce-rho-hazel.vercel.app/api/reviews',
-        {
-          productId: currentReviewProduct._id,
-          orderId: currentOrderId,
-          rating: reviewRating,
-          comment: reviewText
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+  // Validate we have a product ID
+  if (!currentReviewProduct._id) {
+    console.error('Product ID missing in:', currentReviewProduct);
+    toast.error('Product information is incomplete');
+    return;
+  }
+
+  setIsSubmittingReview(true);
+
+  try {
+    // Prepare the review payload
+    const reviewPayload = {
+      productId: currentReviewProduct._id,
+      orderId: currentOrderId,
+      rating: reviewRating,
+      comment: reviewText.trim() // Clean up whitespace
+    };
+
+    console.log('Submitting review with:', reviewPayload); // Debug log
+
+    const response = await axios.post(
+      'https://ecommerce-rho-hazel.vercel.app/api/reviews',
+      reviewPayload,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
-
-      if (response.data.success) {
-        toast.success('Thank you for your review!');
-        setShowReviewModal(false);
-        setReviewText('');
-        setReviewRating(5);
-        setCurrentReviewProduct(null);
-        
-        setOrders(prev => prev.map(order => {
-          if (order._id === currentOrderId) {
-            return {
-              ...order,
-              items: order.items.map(item => {
-                if (item._id === currentReviewProduct._id) {
-                  return { ...item, reviewed: true };
-                }
-                return item;
-              })
-            };
-          }
-          return order;
-        }));
       }
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to submit review');
-    } finally {
-      setIsSubmittingReview(false);
-    }
-  };
+    );
 
+    if (response.data.success) {
+      toast.success('Thank you for your review!');
+      
+      // Update local state to reflect the review
+      setOrders(prev => prev.map(order => {
+        if (order._id === currentOrderId) {
+          return {
+            ...order,
+            items: order.items.map(item => {
+              if (item._id === currentReviewProduct._id) {
+                return { 
+                  ...item, 
+                  reviewed: true,
+                  review: {  // Store the review details
+                    rating: reviewRating,
+                    comment: reviewText,
+                    createdAt: new Date().toISOString()
+                  }
+                };
+              }
+              return item;
+            })
+          };
+        }
+        return order;
+      }));
+    } else {
+      toast.error(response.data.message || 'Review submission failed');
+    }
+  } catch (err) {
+    console.error('Review submission error:', {
+      error: err.response?.data,
+      request: err.config?.data,
+      status: err.response?.status
+    });
+    
+    const errorMessage = err.response?.data?.message || 
+                        err.message || 
+                        'Failed to submit review';
+    toast.error(errorMessage);
+  } finally {
+    // Reset form and loading state
+    setShowReviewModal(false);
+    setReviewText('');
+    setReviewRating(5);
+    setCurrentReviewProduct(null);
+    setIsSubmittingReview(false);
+  }
+};
   const getStatusColor = (status) => {
     if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
