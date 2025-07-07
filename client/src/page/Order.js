@@ -140,36 +140,35 @@ function OrderConfirmation() {
   };
 
 const handleSubmitReview = async () => {
-  // Validate we have required data before proceeding
+  // First, ensure we have all required data
   if (!currentReviewProduct || !currentOrderId) {
-    console.error('Missing review data:', { currentReviewProduct, currentOrderId });
-    toast.error('Unable to submit review - missing product or order information');
+    toast.error('Missing required review information');
     return;
   }
 
-  // Validate we have a product ID
-  if (!currentReviewProduct._id) {
-    console.error('Product ID missing in:', currentReviewProduct);
-    toast.error('Product information is incomplete');
+  // Get the product ID from the nested structure
+  const productId = currentReviewProduct.product?._id;
+  if (!productId) {
+    console.error('Product ID not found in:', currentReviewProduct);
+    toast.error('Could not identify the product to review');
     return;
   }
 
   setIsSubmittingReview(true);
 
   try {
-    // Prepare the review payload
-    const reviewPayload = {
-      productId: currentReviewProduct._id,
+    const reviewData = {
+      productId: productId,  // Use the properly extracted ID
       orderId: currentOrderId,
       rating: reviewRating,
-      comment: reviewText.trim() // Clean up whitespace
+      comment: reviewText.trim()
     };
 
-    console.log('Submitting review with:', reviewPayload); // Debug log
+    console.log('Submitting review with:', reviewData); // Debug log
 
     const response = await axios.post(
       'https://ecommerce-rho-hazel.vercel.app/api/reviews',
-      reviewPayload,
+      reviewData,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -180,18 +179,22 @@ const handleSubmitReview = async () => {
 
     if (response.data.success) {
       toast.success('Thank you for your review!');
+      setShowReviewModal(false);
+      setReviewText('');
+      setReviewRating(5);
+      setCurrentReviewProduct(null);
       
-      // Update local state to reflect the review
+      // Update the order to mark this product as reviewed
       setOrders(prev => prev.map(order => {
         if (order._id === currentOrderId) {
           return {
             ...order,
             items: order.items.map(item => {
-              if (item._id === currentReviewProduct._id) {
+              if (item.product?._id === productId) {  // Compare with nested ID
                 return { 
                   ...item, 
                   reviewed: true,
-                  review: {  // Store the review details
+                  review: {
                     rating: reviewRating,
                     comment: reviewText,
                     createdAt: new Date().toISOString()
@@ -204,26 +207,14 @@ const handleSubmitReview = async () => {
         }
         return order;
       }));
-    } else {
-      toast.error(response.data.message || 'Review submission failed');
     }
   } catch (err) {
     console.error('Review submission error:', {
       error: err.response?.data,
-      request: err.config?.data,
-      status: err.response?.status
+      config: err.config
     });
-    
-    const errorMessage = err.response?.data?.message || 
-                        err.message || 
-                        'Failed to submit review';
-    toast.error(errorMessage);
+    toast.error(err.response?.data?.message || 'Failed to submit review');
   } finally {
-    // Reset form and loading state
-    setShowReviewModal(false);
-    setReviewText('');
-    setReviewRating(5);
-    setCurrentReviewProduct(null);
     setIsSubmittingReview(false);
   }
 };
