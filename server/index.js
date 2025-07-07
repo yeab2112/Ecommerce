@@ -13,6 +13,7 @@ import cartRoutes from './router/cartRout.js';
 import orderRoutes from './router/order.js';
 import paymentRoutes from './router/paymentRoutes.js';
 import notificationRouter from './router/notificationRoutes.js';
+import reviewRouter  from './router/review.js';
 
 dotenv.config();
 const app = express();
@@ -98,6 +99,7 @@ app.use('/api/product', productRouter);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/notification', notificationRouter);
+app.use('/api/reviews', reviewRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {

@@ -16,6 +16,12 @@ function OrderConfirmation() {
   const [currentOrderId, setCurrentOrderId] = useState(null);
   const [allItemsReceived, setAllItemsReceived] = useState(false);
   const [itemsInGoodCondition, setItemsInGoodCondition] = useState(false);
+  // for review
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [currentReviewProduct, setCurrentReviewProduct] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     const fetchUserOrders = async () => {
@@ -88,50 +94,100 @@ function OrderConfirmation() {
     }
   };
 
- const handleConfirmReceived = async () => {
-  if (!currentOrderId) return;
+  const handleConfirmReceived = async () => {
+    if (!currentOrderId) return;
 
-  try {
-    const response = await axios.put(
-      `https://ecommerce-rho-hazel.vercel.app/api/orders/confirm-received/${currentOrderId}`,
-      {
-        note: confirmationNote,
-        allItemsReceived,
-        itemsInGoodCondition
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    if (response.data.success) {
-      setOrders(prev => prev.map(order =>
-        order._id === currentOrderId ? {
-          ...order,
-          status: 'received', // Make sure to update the status
-          receivedConfirmation: {
-            confirmed: true,
-            confirmedAt: new Date().toISOString(),
-            note: confirmationNote,
-            allItemsReceived,
-            itemsInGoodCondition
+    try {
+      const response = await axios.put(
+        `https://ecommerce-rho-hazel.vercel.app/api/orders/confirm-received/${currentOrderId}`,
+        {
+          note: confirmationNote,
+          allItemsReceived,
+          itemsInGoodCondition
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
-        } : order
-      ));
-      toast.success('Thank you for confirming receipt of your order!');
-      setShowConfirmationModal(false);
-      setConfirmationNote('');
-      setAllItemsReceived(false);
-      setItemsInGoodCondition(false);
+        }
+      );
+
+      if (response.data.success) {
+        setOrders(prev => prev.map(order =>
+          order._id === currentOrderId ? {
+            ...order,
+            status: 'received',
+            receivedConfirmation: {
+              confirmed: true,
+              confirmedAt: new Date().toISOString(),
+              note: confirmationNote,
+              allItemsReceived,
+              itemsInGoodCondition
+            }
+          } : order
+        ));
+        toast.success('Thank you for confirming receipt of your order!');
+        setShowConfirmationModal(false);
+        setConfirmationNote('');
+        setAllItemsReceived(false);
+        setItemsInGoodCondition(false);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to confirm receipt');
+      console.error('Confirmation error:', err.response?.data?.debug);
     }
-  } catch (err) {
-    toast.error(err.response?.data?.message || 'Failed to confirm receipt');
-    console.error('Confirmation error:', err.response?.data?.debug); // Log debug info
-  }
-};
+  };
+
+  const handleSubmitReview = async () => {
+    if (!currentReviewProduct || !currentOrderId) return;
+    setIsSubmittingReview(true);
+
+    try {
+      const response = await axios.post(
+        'https://ecommerce-rho-hazel.vercel.app/api/reviews',
+        {
+          productId: currentReviewProduct._id,
+          orderId: currentOrderId,
+          rating: reviewRating,
+          comment: reviewText
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        toast.success('Thank you for your review!');
+        setShowReviewModal(false);
+        setReviewText('');
+        setReviewRating(5);
+        setCurrentReviewProduct(null);
+        
+        setOrders(prev => prev.map(order => {
+          if (order._id === currentOrderId) {
+            return {
+              ...order,
+              items: order.items.map(item => {
+                if (item._id === currentReviewProduct._id) {
+                  return { ...item, reviewed: true };
+                }
+                return item;
+              })
+            };
+          }
+          return order;
+        }));
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   const getStatusColor = (status) => {
     if (!status) return 'bg-gray-100 text-gray-800';
@@ -230,7 +286,62 @@ function OrderConfirmation() {
         </div>
       )}
 
-      {/* Order Cards */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Review {currentReviewProduct?.name}</h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    className="text-2xl focus:outline-none"
+                  >
+                    {star <= reviewRating ? '★' : '☆'}
+                  </button>
+                ))}
+                <span className="ml-2 text-gray-600">{reviewRating} out of 5</span>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Your Review</label>
+              <textarea
+                className="w-full p-2 border border-gray-300 rounded-md"
+                rows={4}
+                placeholder="Share your experience with this product..."
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setReviewText('');
+                  setReviewRating(5);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitReview}
+                disabled={isSubmittingReview}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
+              >
+                {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-8">
         {orders.map((order) => {
           const orderDate = new Date(order.createdAt).toLocaleString('en-US', {
@@ -239,7 +350,6 @@ function OrderConfirmation() {
 
           return (
             <div key={order._id} className="border rounded-lg overflow-hidden shadow-sm">
-              {/* Order Header */}
               <div className="bg-gray-50 p-4 border-b flex justify-between items-center">
                 <div>
                   <h2 className="font-semibold">
@@ -252,11 +362,10 @@ function OrderConfirmation() {
                 </span>
               </div>
 
-              {/* Order Items */}
               <div className="divide-y">
                 {order.items.map((item, index) => (
-                  <div key={index} className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center">
+                  <div key={index} className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="flex items-center col-span-2">
                       <img
                         className="w-20 h-20 object-contain"
                         src={item.image || '/placeholder-product.jpg'}
@@ -283,18 +392,35 @@ function OrderConfirmation() {
                       </div>
                     </div>
 
-                    <div className="flex items-center md:justify-center">
+                    <div className="flex items-center">
                       <p className="text-gray-600">Quantity: {item.quantity}</p>
                     </div>
 
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-between">
                       <p className="font-medium">{currency}{item.price.toFixed(2)}</p>
+                      {(order.status === 'delivered' || order.status === 'received') && (
+                        <div className="ml-4">
+                          {item.reviewed ? (
+                            <span className="text-green-600 text-sm">✓ Reviewed</span>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setCurrentReviewProduct(item);
+                                setCurrentOrderId(order._id);
+                                setShowReviewModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 text-sm underline"
+                            >
+                              Review
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Order Footer */}
               <div className="bg-gray-50 p-4 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="w-full md:w-auto space-y-2">
                   <button
