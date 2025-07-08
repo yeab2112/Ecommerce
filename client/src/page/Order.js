@@ -139,85 +139,78 @@ function OrderConfirmation() {
     }
   };
 
-const handleSubmitReview = async () => {
-  // First, ensure we have all required data
-  if (!currentReviewProduct || !currentOrderId) {
-    toast.error('Missing required review information');
-    return;
-  }
-
-  // Get the product ID from the nested structure
-  const productId = currentReviewProduct.product?._id;
-  if (!productId) {
-    console.error('Product ID not found in:', currentReviewProduct);
-    toast.error('Could not identify the product to review');
-    return;
-  }
-
-  setIsSubmittingReview(true);
-
-  try {
-    const reviewData = {
-      productId: productId,  // Use the properly extracted ID
-      orderId: currentOrderId,
-      rating: reviewRating,
-      comment: reviewText.trim()
-    };
-
-    console.log('Submitting review with:', reviewData); // Debug log
-
-    const response = await axios.post(
-      'https://ecommerce-rho-hazel.vercel.app/api/reviews',
-      reviewData,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    if (response.data.success) {
-      toast.success('Thank you for your review!');
-      setShowReviewModal(false);
-      setReviewText('');
-      setReviewRating(5);
-      setCurrentReviewProduct(null);
-      
-      // Update the order to mark this product as reviewed
-      setOrders(prev => prev.map(order => {
-        if (order._id === currentOrderId) {
-          return {
-            ...order,
-            items: order.items.map(item => {
-              if (item.product?._id === productId) {  // Compare with nested ID
-                return { 
-                  ...item, 
-                  reviewed: true,
-                  review: {
-                    rating: reviewRating,
-                    comment: reviewText,
-                    createdAt: new Date().toISOString()
-                  }
-                };
-              }
-              return item;
-            })
-          };
-        }
-        return order;
-      }));
+  const handleSubmitReview = async () => {
+    if (!currentReviewProduct || !currentOrderId) {
+      toast.error('Missing required review information');
+      return;
     }
-  } catch (err) {
-    console.error('Review submission error:', {
-      error: err.response?.data,
-      config: err.config
-    });
-    toast.error(err.response?.data?.message || 'Failed to submit review');
-  } finally {
-    setIsSubmittingReview(false);
-  }
-};
+
+    const productId = currentReviewProduct?._id;
+    if (!productId) {
+      console.error('Product ID not found in:', currentReviewProduct);
+      toast.error('Could not identify the product to review');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+
+    try {
+      const reviewData = {
+        productId: productId,
+        orderId: currentOrderId,
+        rating: reviewRating,
+        comment: reviewText.trim()
+      };
+
+      const response = await axios.post(
+        'https://ecommerce-rho-hazel.vercel.app/api/reviews',
+        reviewData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        toast.success('Thank you for your review!');
+        setShowReviewModal(false);
+        setReviewText('');
+        setReviewRating(5);
+        setCurrentReviewProduct(null);
+        
+        setOrders(prev => prev.map(order => {
+          if (order._id === currentOrderId) {
+            return {
+              ...order,
+              items: order.items.map(item => {
+                if (item.product?._id === productId) {
+                  return { 
+                    ...item, 
+                    reviewed: true,
+                    review: {
+                      rating: reviewRating,
+                      comment: reviewText,
+                      createdAt: new Date().toISOString()
+                    }
+                  };
+                }
+                return item;
+              })
+            };
+          }
+          return order;
+        }));
+      }
+    } catch (err) {
+      console.error('Review submission error:', err.response?.data);
+      toast.error(err.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     if (!status) return 'bg-gray-100 text-gray-800';
     switch (status.toLowerCase()) {
@@ -392,49 +385,39 @@ const handleSubmitReview = async () => {
               </div>
 
               <div className="divide-y">
-                {order.items.map((item, index) => (
-                  <div key={index} className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                {order.items.map((item) => (
+                  <div key={`${order._id}-${item.product?._id}`} className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="flex items-center col-span-2">
                       <img
                         className="w-20 h-20 object-contain"
-                        src={item.image || '/placeholder-product.jpg'}
-                        alt={item.name}
+                        src={item.product?.images?.[0] || '/placeholder-product.jpg'}
+                        alt={item.product?.name}
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = '/placeholder-product.jpg';
                         }}
                       />
                       <div className="ml-4">
-                        <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-sm text-gray-600">Size: {item.size}</p>
-                        {item.color && (
-                          <div className="flex items-center mt-1">
-                            <span className="text-sm text-gray-600 mr-2">Color:</span>
-                            <div
-                              className="w-4 h-4 rounded-full border border-gray-300"
-                              style={{ backgroundColor: item.color.toLowerCase() }}
-                              title={item.color}
-                            />
-                            <span className="text-sm text-gray-600 ml-1">{item.color}</span>
-                          </div>
-                        )}
+                        <h3 className="font-medium">{item.product?.name}</h3>
+                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center">
-                      <p className="text-gray-600">Quantity: {item.quantity}</p>
+                    <div className="flex items-center justify-end">
+                      <p className="font-medium">
+                        {currency}{(item.product?.price * item.quantity).toFixed(2)}
+                      </p>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">{currency}{item.price.toFixed(2)}</p>
+                    <div className="flex items-center justify-end">
                       {(order.status === 'delivered' || order.status === 'received') && (
-                        <div className="ml-4">
+                        <div>
                           {item.reviewed ? (
                             <span className="text-green-600 text-sm">✓ Reviewed</span>
                           ) : (
                             <button
                               onClick={() => {
-                                setCurrentReviewProduct(item);
+                                setCurrentReviewProduct(item.product);
                                 setCurrentOrderId(order._id);
                                 setShowReviewModal(true);
                               }}
