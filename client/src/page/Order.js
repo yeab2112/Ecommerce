@@ -23,10 +23,18 @@ function OrderConfirmation() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   // Utility function to handle both product structures
-  const getProductData = (item) => {
-    return item.product || item;
-  };
-
+ const getProductData = (item) => {
+  // If item has nested product, use that, otherwise use item itself
+  return item.product ? {
+    ...item.product,
+    // Keep item-specific fields
+    size: item.size,
+    color: item.color,
+    quantity: item.quantity,
+    reviewed: item.reviewed,
+    review: item.review
+  } : item;
+};
   useEffect(() => {
     const fetchUserOrders = async () => {
       if (!token) {
@@ -144,20 +152,20 @@ function OrderConfirmation() {
   };
 
   const handleSubmitReview = async () => {
-    if (!currentReviewProduct || !currentOrderId) {
-      toast.error('Missing required review information');
-      return;
-    }
+  if (!currentReviewProduct || !currentOrderId) {
+    toast.error('Missing required review information');
+    return;
+  }
 
-    const product = getProductData(currentReviewProduct);
-    const productId = product?._id;
-    
-    if (!productId) {
-      console.error('Product ID not found in:', currentReviewProduct);
-      toast.error('Could not identify the product to review');
-      return;
-    }
-
+  // Get the normalized product data
+  const product = getProductData(currentReviewProduct);
+  const productId = product._id;
+  
+  if (!productId) {
+    console.error('Product ID not found in:', currentReviewProduct);
+    toast.error('Could not identify the product to review');
+    return;
+  }
     setIsSubmittingReview(true);
 
     try {
@@ -395,9 +403,9 @@ function OrderConfirmation() {
               </div>
 
               <div className="divide-y">
-                {order.items.map((item) => {
-                  const product = getProductData(item);
-                  const productId = product?._id;
+               {order.items.map((item) => {
+  const product = getProductData(item);
+  const productId = product._id;
                   
                   return (
                     <div key={`${order._id}-${productId}`} className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -430,7 +438,7 @@ function OrderConfirmation() {
 
                       <div className="flex items-center justify-end">
                         <p className="font-medium">
-                          {currency}{(product?.price * item.quantity).toFixed(2)}
+                          {currency}{(product ?.price * item.quantity).toFixed(2)}
                         </p>
                       </div>
 
