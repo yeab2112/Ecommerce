@@ -16,12 +16,16 @@ function OrderConfirmation() {
   const [currentOrderId, setCurrentOrderId] = useState(null);
   const [allItemsReceived, setAllItemsReceived] = useState(false);
   const [itemsInGoodCondition, setItemsInGoodCondition] = useState(false);
-  // for review
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [currentReviewProduct, setCurrentReviewProduct] = useState(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  // Utility function to handle both product structures
+  const getProductData = (item) => {
+    return item.product || item;
+  };
 
   useEffect(() => {
     const fetchUserOrders = async () => {
@@ -145,7 +149,9 @@ function OrderConfirmation() {
       return;
     }
 
-    const productId = currentReviewProduct?._id;
+    const product = getProductData(currentReviewProduct);
+    const productId = product?._id;
+    
     if (!productId) {
       console.error('Product ID not found in:', currentReviewProduct);
       toast.error('Could not identify the product to review');
@@ -185,7 +191,8 @@ function OrderConfirmation() {
             return {
               ...order,
               items: order.items.map(item => {
-                if (item.product?._id === productId) {
+                const itemProduct = getProductData(item);
+                if (itemProduct?._id === productId) {
                   return { 
                     ...item, 
                     reviewed: true,
@@ -247,6 +254,7 @@ function OrderConfirmation() {
     <div className="max-w-7xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Your Orders</h1>
 
+      {/* Confirmation Modal */}
       {showConfirmationModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
@@ -308,10 +316,11 @@ function OrderConfirmation() {
         </div>
       )}
 
+      {/* Review Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">Review {currentReviewProduct?.name}</h3>
+            <h3 className="text-lg font-bold mb-4">Review {getProductData(currentReviewProduct)?.name}</h3>
             
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
@@ -364,6 +373,7 @@ function OrderConfirmation() {
         </div>
       )}
 
+      {/* Orders List */}
       <div className="space-y-8">
         {orders.map((order) => {
           const orderDate = new Date(order.createdAt).toLocaleString('en-US', {
@@ -385,52 +395,68 @@ function OrderConfirmation() {
               </div>
 
               <div className="divide-y">
-                {order.items.map((item) => (
-                  <div key={`${order._id}-${item.product?._id}`} className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="flex items-center col-span-2">
-                      <img
-                        className="w-20 h-20 object-contain"
-                        src={item.product?.images?.[0] || '/placeholder-product.jpg'}
-                        alt={item.product?.name}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/placeholder-product.jpg';
-                        }}
-                      />
-                      <div className="ml-4">
-                        <h3 className="font-medium">{item.product?.name}</h3>
-                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end">
-                      <p className="font-medium">
-                        {currency}{(item.product?.price * item.quantity).toFixed(2)}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-end">
-                      {(order.status === 'delivered' || order.status === 'received') && (
-                        <div>
-                          {item.reviewed ? (
-                            <span className="text-green-600 text-sm">✓ Reviewed</span>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setCurrentReviewProduct(item.product);
-                                setCurrentOrderId(order._id);
-                                setShowReviewModal(true);
-                              }}
-                              className="text-blue-600 hover:text-blue-800 text-sm underline"
-                            >
-                              Review
-                            </button>
+                {order.items.map((item) => {
+                  const product = getProductData(item);
+                  const productId = product?._id;
+                  
+                  return (
+                    <div key={`${order._id}-${productId}`} className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="flex items-center col-span-2">
+                        <img
+                          className="w-20 h-20 object-contain"
+                          src={product?.image || '/placeholder-product.jpg'}
+                          alt={product?.name}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/placeholder-product.jpg';
+                          }}
+                        />
+                        <div className="ml-4">
+                          <h3 className="font-medium">{product?.name}</h3>
+                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                          {item.size && <p className="text-sm text-gray-600">Size: {item.size}</p>}
+                          {item.color && (
+                            <div className="flex items-center mt-1">
+                              <span className="text-sm text-gray-600 mr-2">Color:</span>
+                              <div
+                                className="w-4 h-4 rounded-full border border-gray-300"
+                                style={{ backgroundColor: item.color.toLowerCase() }}
+                                title={item.color}
+                              />
+                            </div>
                           )}
                         </div>
-                      )}
+                      </div>
+
+                      <div className="flex items-center justify-end">
+                        <p className="font-medium">
+                          {currency}{(product?.price * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-end">
+                        {(order.status === 'delivered' || order.status === 'received') && (
+                          <div>
+                            {item.reviewed ? (
+                              <span className="text-green-600 text-sm">✓ Reviewed</span>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setCurrentReviewProduct(item);
+                                  setCurrentOrderId(order._id);
+                                  setShowReviewModal(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 text-sm underline"
+                              >
+                                Review
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="bg-gray-50 p-4 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
