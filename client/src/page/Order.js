@@ -404,7 +404,7 @@ function OrderConfirmation() {
 
               <div className="divide-y">
                {order.items.map((item) => {
-  const product = getProductData(item);
+  const product = item.product;
   const productId = product._id;
                   
                   return (
