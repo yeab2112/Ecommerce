@@ -23,17 +23,21 @@ function OrderConfirmation() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   // Utility function to handle both product structures
- const getProductData = (item) => {
-  // If item has nested product, use that, otherwise use item itself
-  return item.product ? {
-    ...item.product,
-    // Keep item-specific fields
-    size: item.size,
-    color: item.color,
-    quantity: item.quantity,
-    reviewed: item.reviewed,
-    review: item.review
-  } : item;
+ const getProductData = (product) => {
+  if (!product) return null;
+  
+  return {
+    _id: product._id,
+    name: product.name,
+    image: product.image,
+    price: product.price,
+    // Product-specific fields
+    size: product.size,
+    color: product.color,
+    quantity: product.quantity,
+    reviewed: product.reviewed,
+    review: product.review
+  };
 };
   useEffect(() => {
     const fetchUserOrders = async () => {
@@ -156,11 +160,8 @@ function OrderConfirmation() {
     toast.error('Missing required review information');
     return;
   }
-
-  // Get the normalized product data
-  const product = getProductData(currentReviewProduct);
+ const product = getProductData(currentReviewProduct);
   const productId = product._id;
-  
   if (!productId) {
     console.error('Product ID not found in:', currentReviewProduct);
     toast.error('Could not identify the product to review');
@@ -199,7 +200,7 @@ function OrderConfirmation() {
             return {
               ...order,
               items: order.items.map(item => {
-                const itemProduct = getProductData(item);
+                const itemProduct = getProductData(item.product);
                 if (itemProduct?._id === productId) {
                   return { 
                     ...item, 
@@ -404,8 +405,9 @@ function OrderConfirmation() {
 
               <div className="divide-y">
                {order.items.map((item) => {
-  const product = item.product;
+ const product = getProductData(item.product);
   const productId = product._id;
+  
                   
                   return (
                     <div key={`${order._id}-${productId}`} className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -421,15 +423,15 @@ function OrderConfirmation() {
                         />
                         <div className="ml-4">
                           <h3 className="font-medium">{product?.name}</h3>
-                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                          {item.size && <p className="text-sm text-gray-600">Size: {item.size}</p>}
-                          {item.color && (
+                          <p className="text-sm text-gray-600">Quantity: {product.quantity}</p>
+                          {item.size && <p className="text-sm text-gray-600">Size: {product.size}</p>}
+                          {product.color && (
                             <div className="flex items-center mt-1">
                               <span className="text-sm text-gray-600 mr-2">Color:</span>
                               <div
                                 className="w-4 h-4 rounded-full border border-gray-300"
-                                style={{ backgroundColor: item.color.toLowerCase() }}
-                                title={item.color}
+                                style={{ backgroundColor: product.color.toLowerCase() }}
+                                title={product.color}
                               />
                             </div>
                           )}
@@ -438,7 +440,7 @@ function OrderConfirmation() {
 
                       <div className="flex items-center justify-end">
                         <p className="font-medium">
-                          {currency}{(product ?.price * item.quantity).toFixed(2)}
+                          {currency}{(product ?.price * product.quantity).toFixed(2)}
                         </p>
                       </div>
 
@@ -450,7 +452,7 @@ function OrderConfirmation() {
                             ) : (
                               <button
                                 onClick={() => {
-                                  setCurrentReviewProduct(item);
+                                  setCurrentReviewProduct(product);
                                   setCurrentOrderId(order._id);
                                   setShowReviewModal(true);
                                 }}

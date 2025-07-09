@@ -97,15 +97,17 @@ const getUserOrders = async (req, res) => {
     }
 
     // Transform order items for cleaner client response
-    const transformedOrders = orders.items.map(item => ({
-  ...item,
+    const transformedOrders = orders.map(order => ({
+  ...order,
+  items: order.items.map(item => ({
+    ...item,
   product: {
     _id: item.product?._id, // 👈 Add this line
     name: item.product?.name,
     price: item.product?.price,
     image: item.product?.images?.[0],
     slug: item.product?.slug
-  }
+  }}))
 }))
     ;
 
