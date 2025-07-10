@@ -1,19 +1,19 @@
-import { useParams } from 'react-router-dom'; 
-import axios from 'axios';  
-import { assets } from '../asset/asset';  
-import RelatedProduct from '../component/Relatedproduct';  
-import React, { useContext, useState, useEffect } from 'react';  
-import { ShopContext } from '../context/ShopContext';  
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import { assets } from '../asset/asset';
+import RelatedProduct from '../component/Relatedproduct';
+import React, { useContext, useState, useEffect } from 'react';
+import { ShopContext } from '../context/ShopContext';
 
 const Product = () => {
-  const { productId } = useParams(); 
-  const [product, setProduct] = useState(null); 
-  const { products, addToCart } = useContext(ShopContext);  
-  const [currentImage, setCurrentImage] = useState(assets.placeholder); 
-  const [selectedSize, setSelectedSize] = useState(''); 
-  const [selectedColor, setSelectedColor] = useState(null); 
-  const [error, setError] = useState(''); 
-  const [loading, setLoading] = useState(true);  
+  const { productId } = useParams();
+  const [product, setProduct] = useState(null);
+  const { products, addToCart } = useContext(ShopContext);
+  const [currentImage, setCurrentImage] = useState(assets.placeholder);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const normalizeColor = (color) => {
     if (!color) return { name: 'Unknown', code: '#CCCCCC', id: 'unknown' };
@@ -48,7 +48,7 @@ const Product = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        setLoading(true); 
+        setLoading(true);
         const response = await axios.get(
           `https://ecommerce-rho-hazel.vercel.app/api/product/detail_products/${productId}`
         );
@@ -65,7 +65,7 @@ const Product = () => {
           ...response.data,
           sizes: response.data.sizes || [], 
           colors: normalizedColors,
-          rating: response.data.rating || 4.2,  
+          rating: response.data.rating || 4.2,
         });
         
         setCurrentImage(response.data.images?.[0] || assets.placeholder);
@@ -78,32 +78,32 @@ const Product = () => {
           setSelectedColor(normalizedColors[0]);
         }
       } catch (error) {
-        console.error('Error fetching product details:', error); 
-        setError('Product not found'); 
+        console.error('Error fetching product details:', error);
+        setError('Product not found');
       } finally {
-        setLoading(false); 
+        setLoading(false);
       }
     };
 
     fetchProduct();
-  }, [productId]);  
+  }, [productId]);
 
   const handleAddToCart = () => {
     if (!selectedSize) {
-      setError('Please select a size.');  
+      setError('Please select a size.');
       return;
     }
     if (!selectedColor) {
       setError('Please select a color.');
       return;
     }
-    setError('');  
+    setError('');
     addToCart(product._id, selectedSize, selectedColor);
   };
 
   const renderStars = (rating) => {
-    const fullStars = Math.floor(rating);  
-    const halfStar = rating - fullStars >= 0.5;  
+    const fullStars = Math.floor(rating);
+    const halfStar = rating - fullStars >= 0.5;
     const totalStars = 5;
 
     return (
@@ -120,8 +120,8 @@ const Product = () => {
     );
   };
 
-  if (loading) return <div className="text-center py-8">Loading...</div>;  
-  if (!product) return <div className="text-center py-8">{error || 'Product not found'}</div>;  
+  if (loading) return <div className="text-center py-8">Loading...</div>;
+  if (!product) return <div className="text-center py-8">{error || 'Product not found'}</div>;
 
   return (
     <div className="product-detail-container p-6 flex flex-col gap-8 w-full max-w-6xl mx-auto">
@@ -130,7 +130,7 @@ const Product = () => {
         <div className="flex flex-col gap-4 order-1">
           <div className="main-image bg-white p-4 rounded-lg shadow-md">
             <img
-              src={currentImage}  
+              src={currentImage}
               alt={product.name}
               className="w-full h-auto max-h-[500px] object-contain mx-auto"
             />
@@ -141,10 +141,10 @@ const Product = () => {
                 key={index}
                 src={img}
                 alt={`Product thumbnail ${index + 1}`}
-                onClick={() => setCurrentImage(img)} 
+                onClick={() => setCurrentImage(img)}
                 className={`w-16 h-16 cursor-pointer object-cover rounded-md ${
                   currentImage === img ? 'ring-2 ring-blue-500' : 'opacity-80 hover:opacity-100'
-                } transition-all`}  
+                } transition-all`}
               />
             ))}
           </div>
@@ -233,7 +233,7 @@ const Product = () => {
           </div>
           
           <button
-            onClick={handleAddToCart} 
+            onClick={handleAddToCart}
             className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-md 
                       font-medium text-lg transition-colors w-full max-w-md"
           >
@@ -273,6 +273,62 @@ const Product = () => {
             )}
           </ul>
         </div>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="reviews-section mt-8">
+        <h3 className="text-xl font-semibold mb-4">Customer Reviews</h3>
+        
+        {product.reviews?.length > 0 ? (
+          <div className="space-y-4">
+            {product.reviews.map((review) => (
+              <div key={review._id} className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex items-center gap-3 mb-2">
+                  {/* User Avatar (Fallback to initials if no image) */}
+                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                    {review.userId?.name?.charAt(0) || 'U'}
+                  </div>
+                  
+                  {/* User Name & Email */}
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      {review.userId?.name || 'Anonymous'}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {review.userId?.email || ''}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Rating Stars */}
+                <div className="flex items-center gap-1 mb-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <span
+                      key={i}
+                      className={`text-xl ${
+                        i < review.rating ? 'text-yellow-500' : 'text-gray-300'
+                      }`}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+
+                {/* Comment */}
+                <p className="text-gray-700">{review.comment}</p>
+
+                {/* Review Date (if available) */}
+                {review.createdAt && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500">No reviews yet. Be the first to review!</p>
+        )}
       </div>
 
       {/* Related Products Section */}
