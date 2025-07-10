@@ -11,26 +11,11 @@ const Product = () => {
   const { products, addToCart } = useContext(ShopContext);
   const [currentImage, setCurrentImage] = useState(assets.placeholder);
   const [selectedSize, setSelectedSize] = useState('');
-  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedColor, setSelectedColor] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const normalizeColor = (color) => {
-    if (!color) return { name: 'Unknown', code: '#CCCCCC', id: 'unknown' };
-    if (typeof color === 'string') {
-      return {
-        name: color,
-        code: getColorCode(color),
-        id: color.toLowerCase()
-      };
-    }
-    return {
-      name: color.name || 'Unknown',
-      code: color.code || getColorCode(color.name),
-      id: color._id || color.id || color.name?.toLowerCase() || 'unknown'
-    };
-  };
-
+  // Color to hex code mapping
   const getColorCode = (colorName) => {
     const colorMap = {
       'black': '#000000',
@@ -57,29 +42,26 @@ const Product = () => {
           throw new Error('Product not found');
         }
 
-        const normalizedColors = Array.isArray(response.data.colors) 
-          ? response.data.colors.map(normalizeColor)
-          : [normalizeColor('Black')]; // Default color
-
         setProduct({
           ...response.data,
-          sizes: response.data.sizes || [], 
-          colors: normalizedColors,
+          // Use backend-normalized sizes and colors directly
+          sizes: response.data.sizes || [],
+          colors: response.data.colors || [],
           rating: response.data.rating || 4.2,
         });
         
         setCurrentImage(response.data.images?.[0] || assets.placeholder);
         
-        // Auto-select first available size and color
+        // Auto-select first available options
         if (response.data.sizes?.length > 0) {
           setSelectedSize(response.data.sizes[0]);
         }
-        if (normalizedColors.length > 0) {
-          setSelectedColor(normalizedColors[0]);
+        if (response.data.colors?.length > 0) {
+          setSelectedColor(response.data.colors[0]);
         }
       } catch (error) {
         console.error('Error fetching product details:', error);
-        setError('Product not found');
+        setError(error.response?.data?.message || 'Product not found');
       } finally {
         setLoading(false);
       }
@@ -193,38 +175,35 @@ const Product = () => {
             <div className="flex items-center gap-4 mb-2">
               <h3 className="text-lg font-semibold">Color:</h3>
               <div className="flex flex-wrap gap-2">
-                {product.colors?.map((color) => {
-                  const normalizedColor = normalizeColor(color);
-                  return (
-                    <button
-                      key={normalizedColor.id}
-                      onClick={() => setSelectedColor(normalizedColor)}
-                      className={`w-10 h-10 flex items-center justify-center border rounded-md ${
-                        selectedColor?.id === normalizedColor.id 
-                          ? 'ring-2 ring-blue-500 border-blue-600'
-                          : 'border-gray-300 hover:border-blue-500'
-                      } transition-colors`}
-                      style={{ backgroundColor: normalizedColor.code }}
-                      title={normalizedColor.name}
-                    >
-                      {selectedColor?.id === normalizedColor.id && (
-                        <svg 
-                          className="w-5 h-5 text-white" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            strokeWidth="2" 
-                            d="M5 13l4 4L19 7" 
-                          />
-                        </svg>
-                      )}
-                    </button>
-                  );
-                })}
+                {product.colors?.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setSelectedColor(color)}
+                    className={`w-10 h-10 flex items-center justify-center border rounded-md ${
+                      selectedColor === color 
+                        ? 'ring-2 ring-blue-500 border-blue-600'
+                        : 'border-gray-300 hover:border-blue-500'
+                    } transition-colors`}
+                    style={{ backgroundColor: getColorCode(color) }}
+                    title={color}
+                  >
+                    {selectedColor === color && (
+                      <svg 
+                        className="w-5 h-5 text-white" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth="2" 
+                          d="M5 13l4 4L19 7" 
+                        />
+                      </svg>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
             {error && !selectedColor && (
@@ -255,7 +234,7 @@ const Product = () => {
               <svg className="w-5 h-5 text-blue-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>Available Colors: {product.colors?.map(c => c.name || c).join(', ')}</span>
+              <span>Available Colors: {product.colors?.join(', ')}</span>
             </li>
             <li className="flex items-start">
               <svg className="w-5 h-5 text-blue-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,12 +263,9 @@ const Product = () => {
             {product.reviews.map((review) => (
               <div key={review._id} className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex items-center gap-3 mb-2">
-                  {/* User Avatar (Fallback to initials if no image) */}
                   <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
                     {review.userId?.name?.charAt(0) || 'U'}
                   </div>
-                  
-                  {/* User Name & Email */}
                   <div>
                     <p className="font-medium text-gray-800">
                       {review.userId?.name || 'Anonymous'}
@@ -300,7 +276,6 @@ const Product = () => {
                   </div>
                 </div>
 
-                {/* Rating Stars */}
                 <div className="flex items-center gap-1 mb-2">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <span
@@ -314,13 +289,11 @@ const Product = () => {
                   ))}
                 </div>
 
-                {/* Comment */}
                 <p className="text-gray-700">{review.comment}</p>
 
-                {/* Review Date (if available) */}
                 {review.createdAt && (
                   <p className="text-sm text-gray-500 mt-2">
-                    {new Date(review.createdAt).toLocaleDateString()}
+                    Reviewed on {new Date(review.createdAt).toLocaleDateString()}
                   </p>
                 )}
               </div>
