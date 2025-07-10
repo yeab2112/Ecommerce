@@ -84,7 +84,7 @@ const getUserOrders = async (req, res) => {
       .select('_id orderNumber items total createdAt status paymentMethod isPaid deliveryInfo')
       .populate({
         path: 'items.product',
-        select: 'name price images slug' // Include essential product details
+        select: 'name price size  quantity images slug' // Include essential product details
       })
       .lean();
 
@@ -106,7 +106,10 @@ const getUserOrders = async (req, res) => {
     name: item.product?.name,
     price: item.product?.price,
     image: item.product?.images?.[0],
-    slug: item.product?.slug
+    slug: item.product?.slug,
+   size: item.product?.size,
+    quantity: item.product?.quantity,
+
   }}))
 }))
     ;
