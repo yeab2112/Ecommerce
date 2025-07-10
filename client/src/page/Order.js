@@ -23,22 +23,20 @@ function OrderConfirmation() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   // Utility function to handle both product structures
- const getProductData = (product) => {
-  if (!product) return null;
-  
+ const getProductData = (product, item) => {
   return {
-    _id: product._id,
-    name: product.name,
-    image: product.image,
-    price: product.price,
-    // Product-specific fields
-    size: product.size,
-    color: product.color,
-    quantity: product.quantity,
-    reviewed: product.reviewed,
-    review: product.review
+    _id: product?._id || null,
+    name: item?.name || product?.name || 'Unnamed Product',
+    image: item?.image || product?.images?.[0] || '/placeholder-product.jpg',
+    price: item?.price || product?.price || 0,
+    size: item?.size || '',
+    color: item?.color || '',
+    quantity: item?.quantity || 1,
+    reviewed: item?.reviewed || false,
+    review: item?.review || null
   };
 };
+
   useEffect(() => {
     const fetchUserOrders = async () => {
       if (!token) {
@@ -405,7 +403,7 @@ function OrderConfirmation() {
 
               <div className="divide-y">
                {order.items.map((item) => {
- const product = getProductData(item.product);
+ const product = getProductData(item.product,item);
   const productId = product._id;
   
                   

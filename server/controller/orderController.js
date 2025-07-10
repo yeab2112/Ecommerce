@@ -84,7 +84,7 @@ const getUserOrders = async (req, res) => {
       .select('_id orderNumber items total createdAt status paymentMethod isPaid deliveryInfo')
       .populate({
         path: 'items.product',
-        select: 'name price size  quantity images slug' // Include essential product details
+        select: 'name  images slug' // Include essential product details
       })
       .lean();
 
@@ -101,19 +101,20 @@ const getUserOrders = async (req, res) => {
   ...order,
   items: order.items.map(item => ({
     ...item,
-  product: {
-    _id: item.product?._id, // 👈 Add this line
-    name: item.product?.name,
-    price: item.product?.price,
-    image: item.product?.images?.[0],
-    slug: item.product?.slug,
-   size: item.product?.size,
-    quantity: item.product?.quantity,
-
-  }}))
-}))
-    ;
-
+    product: {
+      _id: item.product?._id,
+      name: item.product?.name,
+      price: item.price, // ✅ comes from item
+      image: item.image || item.product?.images?.[0] || '/placeholder-product.jpg',
+      slug: item.product?.slug,
+    },
+    size: item.size,
+    quantity: item.quantity,
+    color: item.color,
+    reviewed: item.reviewed,
+    review: item.review
+  }))
+}));
     res.json({
       success: true,
       orders: transformedOrders,
