@@ -9,14 +9,14 @@ const Product = () => {
   const { productId } = useParams(); 
   const [product, setProduct] = useState(null); 
   const { products, addToCart } = useContext(ShopContext);  
-  const [currentImage, setCurrentImage] = useState(null); 
+  const [currentImage, setCurrentImage] = useState(assets.placeholder); 
   const [selectedSize, setSelectedSize] = useState(''); 
   const [selectedColor, setSelectedColor] = useState(null); 
   const [error, setError] = useState(''); 
   const [loading, setLoading] = useState(true);  
 
-  // Helper function to normalize color data
   const normalizeColor = (color) => {
+    if (!color) return { name: 'Unknown', code: '#CCCCCC', id: 'unknown' };
     if (typeof color === 'string') {
       return {
         name: color,
@@ -27,11 +27,10 @@ const Product = () => {
     return {
       name: color.name || 'Unknown',
       code: color.code || getColorCode(color.name),
-      id: color._id || color.id || color.name.toLowerCase()
+      id: color._id || color.id || color.name?.toLowerCase() || 'unknown'
     };
   };
 
-  // Get color code from name
   const getColorCode = (colorName) => {
     const colorMap = {
       'black': '#000000',
@@ -54,25 +53,29 @@ const Product = () => {
           `https://ecommerce-rho-hazel.vercel.app/api/product/detail_products/${productId}`
         );
         
-        if (response.data) {
-          // Normalize colors to ensure consistent format
-          const normalizedColors = Array.isArray(response.data.colors) 
-            ? response.data.colors.map(normalizeColor)
-            : [normalizeColor('Black')]; // Default color
+        if (!response.data) {
+          throw new Error('Product not found');
+        }
 
-          setProduct({
-            ...response.data,
-            sizes: response.data.sizes || [], 
-            colors: normalizedColors,
-            rating: response.data.rating || 4.2,  
-          });
-          
-          setCurrentImage(response.data.images?.[0] || assets.placeholder); 
-          
-          // Auto-select first color if available
-          if (normalizedColors.length > 0) {
-            setSelectedColor(normalizedColors[0]);
-          }
+        const normalizedColors = Array.isArray(response.data.colors) 
+          ? response.data.colors.map(normalizeColor)
+          : [normalizeColor('Black')]; // Default color
+
+        setProduct({
+          ...response.data,
+          sizes: response.data.sizes || [], 
+          colors: normalizedColors,
+          rating: response.data.rating || 4.2,  
+        });
+        
+        setCurrentImage(response.data.images?.[0] || assets.placeholder);
+        
+        // Auto-select first available size and color
+        if (response.data.sizes?.length > 0) {
+          setSelectedSize(response.data.sizes[0]);
+        }
+        if (normalizedColors.length > 0) {
+          setSelectedColor(normalizedColors[0]);
         }
       } catch (error) {
         console.error('Error fetching product details:', error); 
@@ -83,7 +86,7 @@ const Product = () => {
     };
 
     fetchProduct();
-  }, [productId,]);  
+  }, [productId]);  
 
   const handleAddToCart = () => {
     if (!selectedSize) {
@@ -95,8 +98,7 @@ const Product = () => {
       return;
     }
     setError('');  
-   addToCart(product._id, selectedSize, selectedColor); // ✅ Correct
-
+    addToCart(product._id, selectedSize, selectedColor);
   };
 
   const renderStars = (rating) => {
@@ -124,10 +126,8 @@ const Product = () => {
   return (
     <div className="product-detail-container p-6 flex flex-col gap-8 w-full max-w-6xl mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-        
         {/* Image Gallery Column */}
         <div className="flex flex-col gap-4 order-1">
-          {/* Main Image */}
           <div className="main-image bg-white p-4 rounded-lg shadow-md">
             <img
               src={currentImage}  
@@ -135,8 +135,6 @@ const Product = () => {
               className="w-full h-auto max-h-[500px] object-contain mx-auto"
             />
           </div>
-          
-          {/* Thumbnails */}
           <div className="thumbnails flex flex-wrap gap-3 justify-center">
             {product.images?.map((img, index) => (
               <img
@@ -155,20 +153,17 @@ const Product = () => {
         {/* Product Details Column */}
         <div className="details-section flex flex-col gap-4 order-2 lg:order-3 xl:order-2">
           <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-          
           <div className="flex items-center gap-2">
             {renderStars(product.rating)}
             <span className="text-sm text-gray-500">|</span>
             <span className="text-sm text-gray-600">SKU: {product._id.slice(-6)}</span>
           </div>
-          
           <p className="text-2xl font-semibold text-gray-800 my-2">
             ${product.price.toFixed(2)}
           </p>
-          
           <p className="text-gray-600 mb-4">{product.description}</p>
           
-          {/* Size Selection - Updated to show label and options on same row */}
+          {/* Size Selection */}
           <div className="size-selection mb-4">
             <div className="flex items-center gap-4 mb-2">
               <h3 className="text-lg font-semibold">Size:</h3>
@@ -193,7 +188,7 @@ const Product = () => {
             )}
           </div>
 
-          {/* Color Selection - Updated to square format */}
+          {/* Color Selection */}
           <div className="color-selection mb-6">
             <div className="flex items-center gap-4 mb-2">
               <h3 className="text-lg font-semibold">Color:</h3>
@@ -237,7 +232,6 @@ const Product = () => {
             )}
           </div>
           
-          {/* Add to Cart Button */}
           <button
             onClick={handleAddToCart} 
             className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-md 
@@ -247,7 +241,7 @@ const Product = () => {
           </button>
         </div>
 
-        {/* Product Highlights/Details Column */}
+        {/* Product Highlights Column */}
         <div className="product-info order-3 lg:order-2 xl:order-3 bg-gray-50 p-6 rounded-lg">
           <h3 className="text-xl font-semibold mb-4">Product Details</h3>
           <ul className="space-y-3">

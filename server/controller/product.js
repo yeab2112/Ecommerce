@@ -2,7 +2,6 @@
 import { Product } from "../moduls/product.js";
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
-
 dotenv.config();//
 
 cloudinary.config({
@@ -150,7 +149,15 @@ const updateProduct = async (req, res) => {
 const productDetail = async (req, res) => {
   try {
     const productId = req.params.productId;
-    const product = await Product.findById(productId);
+    const product = await Product.findById(productId)
+  .populate({
+    path: 'reviews',
+    select: 'rating comment',
+    populate: {
+      path: 'userId',
+      select: 'name email'
+    }
+  });
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
@@ -202,8 +209,8 @@ const productDetail = async (req, res) => {
       return [];
     };
 
-    const sizes = normalizeSizes(product.sizes || product.size);
-    const colors = normalizeColors(product.colors || product.color);
+    const sizes = normalizeSizes(product.sizes );
+    const colors = normalizeColors(product.colors );
 
     res.status(200).json({
       ...product.toObject(),
