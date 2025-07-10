@@ -38,7 +38,7 @@ const createOrder = async (req, res) => {
       subtotal,
       deliveryFee,
       total,
-      status: 'pending',
+      status: paymentMethod === 'Online Payment' ? 'pending' : 'received',
       paymentDetails: {
         status: paymentMethod === 'Online Payment' ? 'pending' : 'completed',
         method: null,
