@@ -147,39 +147,32 @@ const updateProduct = async (req, res) => {
 // Get product details (used for details page)
 const productDetail = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.productId)
-      .populate({
-        path: 'reviews',
-        populate: [
-          {
-            path: 'userId',
-            select: 'name'  // Only get the 'name' field from User
-          },
-          {
-            path: 'orderId',
-            select: 'orderNumber'  // If you need order info
-          }
-        ]
-      });
-
+    // First get the product
+    const product = await Product.findById(req.params.productId).lean();
+    
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    // Then get all reviews for this product
+    const reviews = await Review.find({ productId: product._id })
+      .populate('userId', 'name')
+      .populate('orderId', 'orderNumber');
+
     // Calculate average rating
     let averageRating = 0;
-    if (product.reviews.length > 0) {
-      const total = product.reviews.reduce((sum, review) => sum + review.rating, 0);
-      averageRating = total / product.reviews.length;
+    if (reviews.length > 0) {
+      averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
     }
 
+    // Prepare response
     const responseData = {
-      ...product.toObject(),
+      ...product,
+      reviews, // Add the populated reviews
       averageRating,
-      reviewCount: product.reviews.length
+      reviewCount: reviews.length
     };
 
-    console.log('Product with populated reviews:', JSON.stringify(responseData, null, 2));
     res.json(responseData);
   } catch (error) {
     console.error('Error in productDetail:', error);

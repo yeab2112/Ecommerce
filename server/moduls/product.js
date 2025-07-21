@@ -43,10 +43,7 @@ const productSchema = new mongoose.Schema(
         match: [/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid color code format']
       }
     }],
-    reviews:[{
-      type:mongoose.Schema.Types.ObjectId,
-      ref:'Review'
-    }],
+   
     bestSeller: { 
       type: Boolean, 
       default: false 

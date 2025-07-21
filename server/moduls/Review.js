@@ -1,19 +1,17 @@
-import mongoose from 'mongoose';
-
 const reviewSchema = new mongoose.Schema({
   productId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
     required: true
   },
-  orderId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Order',
-    required: true
-  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    required: true
+  },
+  orderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order',
     required: true
   },
   rating: {
@@ -25,11 +23,7 @@ const reviewSchema = new mongoose.Schema({
   comment: {
     type: String,
     trim: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
-});
+}, { timestamps: true });
 
-export default mongoose.model('Review', reviewSchema);
+const Review = mongoose.model('Review', reviewSchema);
