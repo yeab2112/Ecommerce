@@ -2,7 +2,6 @@
 import { Product } from "../moduls/product.js";
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
-import { products } from "../../client/src/asset/asset.js";
 dotenv.config();//
 
 cloudinary.config({
