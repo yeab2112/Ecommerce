@@ -1,5 +1,6 @@
 
-import { Product } from "../moduls/product.js";
+import { Product } from "../moduls/product.js"
+import Review from "../moduls/Review.js"
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
 dotenv.config();//

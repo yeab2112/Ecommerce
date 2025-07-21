@@ -1,3 +1,5 @@
+import mongoose from "mongoose"
+
 const reviewSchema = new mongoose.Schema({
   productId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -27,3 +29,4 @@ const reviewSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const Review = mongoose.model('Review', reviewSchema);
+export default Review;
