@@ -255,44 +255,58 @@ const Product = () => {
         <h3 className="text-xl font-semibold mb-4">Customer Reviews</h3>
         
         {product.reviews?.length > 0 ? (
-          <div className="space-y-4">
-            {product.reviews.map((review) => (
-              <div key={review._id} className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                    {review.user?.name?.charAt(0) || 'U'}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800">
-                      {review.user?.name || 'Anonymous'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(review.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
+  <div className="space-y-4">
+    {product.reviews.map((review) => {
+      // Handle different user data structures
+      const userData = review.user || 
+                      (typeof review.userId === 'object' ? review.userId : null);
+      
+      const userName = userData?.name || 'Anonymous';
+      const userInitial = userName.charAt(0);
+      const reviewDate = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : '';
 
-                <div className="flex items-center gap-1 mb-2">
-                  {[...Array(5)].map((_, i) => (
-                    <span
-                      key={i}
-                      className={`text-xl ${
-                        i < review.rating ? 'text-yellow-500' : 'text-gray-300'
-                      }`}
-                    >
-                      ★
-                    </span>
-                  ))}
-                </div>
+      return (
+        <div key={review._id || Math.random()} className="bg-gray-50 p-4 rounded-lg">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+              {userInitial}
+            </div>
+            <div>
+              <p className="font-medium text-gray-800">
+                {userName}
+              </p>
+              {reviewDate && (
+                <p className="text-sm text-gray-500">
+                  {reviewDate}
+                </p>
+              )}
+            </div>
+          </div>
 
-                <p className="text-gray-700">{review.comment}</p>
-              </div>
+          <div className="flex items-center gap-1 mb-2">
+            {[...Array(5)].map((_, i) => (
+              <span
+                key={i}
+                className={`text-xl ${
+                  i < (review.rating || 0) ? 'text-yellow-500' : 'text-gray-300'
+                }`}
+              >
+                ★
+              </span>
             ))}
           </div>
-        ) : (
-          <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
-        )}
-      </div>
+
+          {review.comment && (
+            <p className="text-gray-700">{review.comment}</p>
+          )}
+        </div>
+      );
+    })}
+  </div>
+) : (
+  <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
+)}
+  </div>
 
       {/* Related Products Section */}
       <div className="mt-12">
