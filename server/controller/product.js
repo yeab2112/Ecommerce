@@ -145,15 +145,21 @@ const updateProduct = async (req, res) => {
 };
 
 // Get product details (used for details page)
- const productDetail = async (req, res) => {
+const productDetail = async (req, res) => {
   try {
     const product = await Product.findById(req.params.productId)
       .populate({
         path: 'reviews',
-        populate: {
-          path: 'userId',  // This refers to the field in the Review model
-          select: 'name'   // Only get the 'name' field from User
-        }
+        populate: [
+          {
+            path: 'userId',
+            select: 'name'  // Only get the 'name' field from User
+          },
+          {
+            path: 'orderId',
+            select: 'orderNumber'  // If you need order info
+          }
+        ]
       });
 
     if (!product) {
@@ -167,12 +173,16 @@ const updateProduct = async (req, res) => {
       averageRating = total / product.reviews.length;
     }
 
-    res.json({
+    const responseData = {
       ...product.toObject(),
       averageRating,
       reviewCount: product.reviews.length
-    });
+    };
+
+    console.log('Product with populated reviews:', JSON.stringify(responseData, null, 2));
+    res.json(responseData);
   } catch (error) {
+    console.error('Error in productDetail:', error);
     res.status(500).json({ message: error.message });
   }
 };
