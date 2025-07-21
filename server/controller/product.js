@@ -147,15 +147,12 @@ const updateProduct = async (req, res) => {
 // Get product details (used for details page)
  const productDetail = async (req, res) => {
   try {
-    const productId = req.params.productId;
-
-    const product = await Product.findById(productId)
+    const product = await Product.findById(req.params.productId)
       .populate({
         path: 'reviews',
-        select: 'rating comment userId',
         populate: {
-          path: 'userId',
-          select: 'name email'
+          path: 'userId',  // This refers to the field in the Review model
+          select: 'name'   // Only get the 'name' field from User
         }
       });
 
@@ -163,60 +160,22 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    // Calculate review summary
-    const reviews = product.reviews || [];
-    const averageRating = reviews.length
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-      : 0;
+    // Calculate average rating
+    let averageRating = 0;
+    if (product.reviews.length > 0) {
+      const total = product.reviews.reduce((sum, review) => sum + review.rating, 0);
+      averageRating = total / product.reviews.length;
+    }
 
-    const reviewCount = reviews.length;
-
-    // Normalize sizes to always be an array of strings
-    const normalizeSizes = (sizes) => {
-      if (!sizes) return [];
-      if (Array.isArray(sizes) && sizes.length === 1 && typeof sizes[0] === 'string' && sizes[0].startsWith('[')) {
-        try {
-          return JSON.parse(sizes[0]);
-        } catch {
-          return sizes[0].replace(/[\[\]"]/g, '').split(',').map(s => s.trim());
-        }
-      }
-      if (Array.isArray(sizes)) return sizes;
-      if (typeof sizes === 'string') return sizes.split(',').map(s => s.trim());
-      return [];
-    };
-
-    // Normalize colors to always be an array of strings
-    const normalizeColors = (colors) => {
-      if (!colors) return [];
-      if (Array.isArray(colors) && colors.length === 1 && typeof colors[0] === 'string' && colors[0].startsWith('[')) {
-        try {
-          return JSON.parse(colors[0]);
-        } catch {
-          return colors[0].replace(/[\[\]"]/g, '').split(',').map(c => c.trim());
-        }
-      }
-      if (Array.isArray(colors)) return colors;
-      if (typeof colors === 'string') return colors.split(',').map(c => c.trim());
-      return [];
-    };
-
-    const sizes = normalizeSizes(product.sizes);
-    const colors = normalizeColors(product.colors);
-
-    res.status(200).json({
+    res.json({
       ...product.toObject(),
-      sizes,
-      colors,
-      averageRating: parseFloat(averageRating.toFixed(1)),
-      reviewCount
+      averageRating,
+      reviewCount: product.reviews.length
     });
   } catch (error) {
-    console.error('Error fetching product:', error);
-    res.status(500).json({ message: 'Error fetching product' });
+    res.status(500).json({ message: error.message });
   }
 };
-
 const updateProducts = async (req, res) => {
   try {
     const { productId } = req.params;
