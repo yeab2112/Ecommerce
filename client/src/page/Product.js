@@ -16,19 +16,21 @@ const Product = () => {
   const [loading, setLoading] = useState(true);
 
   // Color to hex code mapping
-  const getColorCode = (colorName) => {
-    const colorMap = {
-      'black': '#000000',
-      'white': '#FFFFFF',
-      'red': '#FF0000',
-      'blue': '#0000FF',
-      'green': '#008000',
-      'yellow': '#FFFF00',
-      'pink': '#FFC0CB',
-      'gray': '#808080',
-    };
-    return colorMap[colorName?.toLowerCase()] || '#CCCCCC';
+const getColorCode = (colorName) => {
+  if (typeof colorName !== 'string') return '#CCCCCC';
+  const colorMap = {
+    black: '#000000',
+    white: '#FFFFFF',
+    red: '#FF0000',
+    blue: '#0000FF',
+    green: '#008000',
+    yellow: '#FFFF00',
+    pink: '#FFC0CB',
+    gray: '#808080',
   };
+  return colorMap[colorName.toLowerCase()] || '#CCCCCC';
+};
+
 
   useEffect(() => {
     const fetchProduct = async () => {
