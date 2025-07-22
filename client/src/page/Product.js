@@ -62,6 +62,7 @@ const Product = () => {
       setError('Please select a size.');
       return;
     }
+    
     if (!selectedColor.name) {
       setError('Please select a color.');
       return;
