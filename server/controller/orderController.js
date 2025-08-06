@@ -360,16 +360,22 @@ const confirmOrderReceived = async (req, res) => {
       { new: true }
     ).populate('user', 'name email');
 
-    // Notify admin
-    notifyAdmin({
-      orderId: updatedOrder._id,
-      customerName: updatedOrder.user.name,
-      customerEmail: updatedOrder.user.email,
-      confirmationTime: new Date(),
-      note: note,
-      conditionChecks: { allItemsReceived, itemsInGoodCondition }
-    });
-
+  try {
+      await notifyAdmin({
+        orderId: updatedOrder._id,
+        customer: {
+          name: updatedOrder.user.name,
+          email: updatedOrder.user.email
+        },
+        note: note || undefined, // Explicit undefined for empty notes
+        conditionChecks: {
+          allItemsReceived,
+          itemsInGoodCondition
+        }
+      });
+    } catch (notificationError) {
+      console.error('⚠️ Order confirmed but notification failed:', notificationError.message);
+    }
     return res.json({
       success: true,
       message: 'Order receipt confirmed successfully',
