@@ -65,7 +65,7 @@ const markAllAsRead = async (req, res) => {
     );
 
     // Only create notification if status is "received"
-    if (status === 'received') {
+  
       await Notification.create({
         type: 'order_received',
         message: `Customer received Order #${order._id.toString().slice(-6)}`,
@@ -83,7 +83,7 @@ const markAllAsRead = async (req, res) => {
           itemsInGoodCondition:order.receivedConfirmation.itemsInGoodCondition
         }
       });
-    }
+    
 
     res.json({ success: true, order });
   } catch (err) {
