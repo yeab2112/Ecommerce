@@ -45,18 +45,25 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
     }
   }, []);
 
-  const markAllAsRead = async () => {
-    try {
-      await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notification/mark-all-read');
+ const markAllAsRead = async () => {
+  try {
+    const response = await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notification/mark-all-read');
+    
+    if (response.data.success) {
       setState((prev) => ({
         ...prev,
         notifications: prev.notifications.map((n) => ({ ...n, read: true })),
         unreadCount: 0,
       }));
-    } catch (err) {
-      console.error('Mark read failed:', err.message);
+      return response.data.message; 
+    } else {
+      throw new Error(response.data.message || 'Failed to mark notifications as read');
     }
-  };
+  } catch (err) {
+    console.error('Mark read failed:', err.response?.data?.message || err.message);
+    throw err; 
+  }
+};
 
   useEffect(() => {
     fetchNotifications();

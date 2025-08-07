@@ -57,38 +57,23 @@ const getAllNotifications = async (req, res) => {
 // Mark all as read
 const markAllAsRead = async (req, res) => {
   try {
-    const { status } = req.body;
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
+    // Update all unread notifications
+    const result = await Notification.updateMany(
+      { read: false }, // Find all unread notifications
+      { $set: { read: true } } // Mark them as read
     );
 
-    // Only create notification if status is "received"
-  
-      await Notification.create({
-        type: 'order_received',
-        message: `Customer received Order #${order._id.toString().slice(-6)}`,
-        orderId: order._id,
-        read: false,
+    res.status(200).json({
+      success: true,
+      message: `Marked ${result.modifiedCount} notifications as read`
+    });
 
-        customer: {
-          name: order.user.name,
-          email: order.user.email
-
-
-        },
-        conditionChecks:{
-          allItemsReceived:order.receivedConfirmation.allItemsReceived,
-          itemsInGoodCondition:order.receivedConfirmation.itemsInGoodCondition
-        }
-      });
-    
-
-    res.json({ success: true, order });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark notifications as read',
+      error: error.message
+    });
   }
 };
-;
 export { getAllNotifications, markAllAsRead, notifyAdmin }
