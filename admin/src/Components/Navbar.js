@@ -2,9 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { asset } from '../asset/asset';
 import { Bell } from 'lucide-react';
-
-const statuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'received'];
-
 const Navbar = ({ onLogout, user, onToggleSidebar }) => {
   const [profileData, setProfileData] = useState({
     name: user?.name || 'Admin User',
@@ -29,28 +26,22 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
     activeTab: 'received',
   });
 
- const fetchNotifications = useCallback(async () => {
-  try {
-    const { data } = await axios.get(
-      'https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications'
-    );
-    
-    // Ensure data is structured correctly
-    const normalizedData = data.map(notification => ({
-      ...notification,
-      // Use normalized status (fallback to 'received' if missing)
-      status: notification.status || notification.orderId?.status || 'received',
-    }));
-
-    setState(prev => ({
-      ...prev,
-      notifications: normalizedData,
-      unreadCount: normalizedData.filter(n => !n.read).length,
-    }));
-  } catch (err) {
-    console.error('Fetch error:', err.response?.data || err.message);
-  }
-}, []);
+  const fetchNotifications = useCallback(async () => {
+    try {
+      // The backend should only send "order received" notifications
+      const { data } = await axios.get(
+        'https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications'
+      );
+      
+      setState(prev => ({
+        ...prev,
+        notifications: data,
+        unreadCount: data.filter(n => !n.read).length,
+      }));
+    } catch (err) {
+      console.error('Fetch error:', err.response?.data || err.message);
+    }
+  }, []);
 
   const markAllAsRead = async () => {
     try {
@@ -102,22 +93,15 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
     setState((prev) => ({ ...prev, showSettings: false }));
   };
 
-  const renderNotification = (n) => (
+ const renderNotification = (n) => (
     <li
       key={n._id}
       className={`p-2 rounded ${!n.read ? 'bg-gray-100 dark:bg-gray-700' : 'bg-transparent'}`}
     >
-      <p className="font-medium">
-        {n.orderId?.status === 'received' && '✅ Order Received'}
-        {n.orderId?.status === 'shipped' && '🚚 Order Shipped'}
-        {n.orderId?.status === 'delivered' && '📦 Order Delivered'}
-        {n.orderId?.status === 'cancelled' && '❌ Order Cancelled'}
-        {n.orderId?.status === 'pending' && '⏳ Order Pending'}
-        {n.orderId?.status === 'processing' && '🔄 Order Processing'}
-      </p>
+      <p className="font-medium">✅ Order Received</p>
       <div className="text-xs text-gray-500 mt-1">
         <p>Order ID: {n.orderId?._id?.slice(-6)}</p>
-        <p>Time: {new Date(n.receivedAt).toLocaleString()}</p>
+        <p>Time: {new Date(n.createdAt).toLocaleString()}</p>
         <p>Total: ${n.orderId?.total?.toFixed(2)}</p>
       </div>
     </li>
@@ -144,80 +128,33 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
             )}
           </button>
 
-          {state.showNoti && (
-            <div
-              className={`absolute ${state.isMobile ? 'left-1/2 -translate-x-1/2' : 'right-0'
-                } top-12 w-96 bg-white dark:bg-gray-800 p-4 rounded shadow z-50 max-h-[80vh] overflow-y-auto`}
-            >
-              <div className="flex justify-between mb-2">
-                <p className="font-semibold dark:text-white">Order Notifications</p>
-                {state.unreadCount > 0 && (
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-xs text-blue-600 dark:text-blue-400"
-                  >
-                    Mark all as read
-                  </button>
-                )}
-              </div>
+           {state.showNoti && (
+        <div className={`absolute ${state.isMobile ? 'left-1/2 -translate-x-1/2' : 'right-0'} 
+          top-12 w-96 bg-white dark:bg-gray-800 p-4 rounded shadow z-50 max-h-[80vh] overflow-y-auto`}
+        >
+          <div className="flex justify-between mb-2">
+            <p className="font-semibold dark:text-white">Order Notifications</p>
+            {state.unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="text-xs text-blue-600 dark:text-blue-400"
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
 
-              {/* Tabs */}
-              <div className="flex gap-2 flex-wrap text-sm mb-4">
-                {statuses.map((status) => {
-                  const unreadInStatus = state.notifications.filter(
-                    (n) => n.orderId?.status === status && !n.read
-                  ).length;
-
-                  return (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        setState((prev) => ({ ...prev, activeTab: status }));
-                      }}
-                      className={`px-2 py-1 rounded ${state.activeTab === status
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white'
-                        }`}
-                    >
-                      {status}
-                      {unreadInStatus > 0 && (
-                        <span className="ml-1 bg-red-500 text-white rounded-full px-1 text-xs">
-                          {unreadInStatus}
-                        </span>
-                      )}
-                    </button>
-
-                  );
-                })}
-              </div>
-
-              {/* Notification List by Status */}
-              <ul className="space-y-2">
-                {(() => {
-                  const filteredNotifications = state.notifications.filter(
-                    (n) => n.orderId?.status?.toLowerCase() === state.activeTab.toLowerCase()
-                  );
-
-                  console.log("Active tab:", state.activeTab);
-                  console.log("Filtered notifications:", filteredNotifications);
-                  console.log(
-                    "All notification statuses:",
-                    state.notifications.map(n => n.orderId?.status)
-                  );
-
-                  if (filteredNotifications.length === 0) {
-                    return (
-                      <li className="text-gray-500 dark:text-gray-400">
-                        No {state.activeTab} orders found
-                      </li>
-                    );
-                  }
-                  return filteredNotifications.map(renderNotification);
-                })()}
-              </ul>
-
-            </div>
-          )}
+          <ul className="space-y-2">
+            {state.notifications.length === 0 ? (
+              <li className="text-gray-500 dark:text-gray-400">
+                No new order notifications
+              </li>
+            ) : (
+              state.notifications.map(renderNotification)
+            )}
+          </ul>
+        </div>
+      )}
 
           <button onClick={() => toggle('showDropdown')}>
             <img
