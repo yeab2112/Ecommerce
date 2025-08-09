@@ -29,41 +29,48 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
     activeTab: 'received',
   });
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const { data } = await axios.get(
-        'https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications'
-      );
-      const unread = data.filter((n) => !n.read);
-      setState((prev) => ({
-        ...prev,
-        notifications: data,
-        unreadCount: unread.length,
-      }));
-    } catch (err) {
-      console.error('Notification error:', err.message);
-    }
-  }, []);
-
- const markAllAsRead = async () => {
+ const fetchNotifications = useCallback(async () => {
   try {
-    const response = await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notification/mark-all-read');
+    const { data } = await axios.get(
+      'https://ecommerce-rho-hazel.vercel.app/api/notification/get-notifications'
+    );
     
-    if (response.data.success) {
-      setState((prev) => ({
-        ...prev,
-        notifications: prev.notifications.map((n) => ({ ...n, read: true })),
-        unreadCount: 0,
-      }));
-      return response.data.message; 
-    } else {
-      throw new Error(response.data.message || 'Failed to mark notifications as read');
-    }
+    // Ensure data is structured correctly
+    const normalizedData = data.map(notification => ({
+      ...notification,
+      // Use normalized status (fallback to 'received' if missing)
+      status: notification.status || notification.orderId?.status || 'received',
+    }));
+
+    setState(prev => ({
+      ...prev,
+      notifications: normalizedData,
+      unreadCount: normalizedData.filter(n => !n.read).length,
+    }));
   } catch (err) {
-    console.error('Mark read failed:', err.response?.data?.message || err.message);
-    throw err; 
+    console.error('Fetch error:', err.response?.data || err.message);
   }
-};
+}, []);
+
+  const markAllAsRead = async () => {
+    try {
+      const response = await axios.put('https://ecommerce-rho-hazel.vercel.app/api/notification/mark-all-read');
+
+      if (response.data.success) {
+        setState((prev) => ({
+          ...prev,
+          notifications: prev.notifications.map((n) => ({ ...n, read: true })),
+          unreadCount: 0,
+        }));
+        return response.data.message;
+      } else {
+        throw new Error(response.data.message || 'Failed to mark notifications as read');
+      }
+    } catch (err) {
+      console.error('Mark read failed:', err.response?.data?.message || err.message);
+      throw err;
+    }
+  };
 
   useEffect(() => {
     fetchNotifications();
@@ -139,9 +146,8 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
 
           {state.showNoti && (
             <div
-              className={`absolute ${
-                state.isMobile ? 'left-1/2 -translate-x-1/2' : 'right-0'
-              } top-12 w-96 bg-white dark:bg-gray-800 p-4 rounded shadow z-50 max-h-[80vh] overflow-y-auto`}
+              className={`absolute ${state.isMobile ? 'left-1/2 -translate-x-1/2' : 'right-0'
+                } top-12 w-96 bg-white dark:bg-gray-800 p-4 rounded shadow z-50 max-h-[80vh] overflow-y-auto`}
             >
               <div className="flex justify-between mb-2">
                 <p className="font-semibold dark:text-white">Order Notifications</p>
@@ -165,12 +171,13 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                   return (
                     <button
                       key={status}
-                      onClick={() => setState((prev) => ({ ...prev, activeTab: status }))}
-                      className={`px-2 py-1 rounded ${
-                        state.activeTab === status
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white'
-                      }`}
+                      onClick={() => {
+                        setState((prev) => ({ ...prev, activeTab: status }));
+                      }}
+                      className={`px-2 py-1 rounded ${state.activeTab === status
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white'
+                        }`}
                     >
                       {status}
                       {unreadInStatus > 0 && (
@@ -179,23 +186,36 @@ const Navbar = ({ onLogout, user, onToggleSidebar }) => {
                         </span>
                       )}
                     </button>
+
                   );
                 })}
               </div>
 
               {/* Notification List by Status */}
               <ul className="space-y-2">
-                {state.notifications.filter((n) => n.orderId?.status === state.activeTab)
-                  .length === 0 ? (
-                  <li className="text-gray-500 dark:text-gray-400">
-                    No orders in {state.activeTab}
-                  </li>
-                ) : (
-                  state.notifications
-                    .filter((n) => n.orderId?.status === state.activeTab)
-                    .map(renderNotification)
-                )}
+                {(() => {
+                  const filteredNotifications = state.notifications.filter(
+                    (n) => n.orderId?.status?.toLowerCase() === state.activeTab.toLowerCase()
+                  );
+
+                  console.log("Active tab:", state.activeTab);
+                  console.log("Filtered notifications:", filteredNotifications);
+                  console.log(
+                    "All notification statuses:",
+                    state.notifications.map(n => n.orderId?.status)
+                  );
+
+                  if (filteredNotifications.length === 0) {
+                    return (
+                      <li className="text-gray-500 dark:text-gray-400">
+                        No {state.activeTab} orders found
+                      </li>
+                    );
+                  }
+                  return filteredNotifications.map(renderNotification);
+                })()}
               </ul>
+
             </div>
           )}
 

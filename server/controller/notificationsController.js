@@ -45,10 +45,17 @@ const getAllNotifications = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate({
         path: 'orderId',
-        select: 'status total user paymentMethod payment createdAt ', // Choose what to return
-      });
+        select: 'status total user paymentMethod payment createdAt',
+      })
+      .lean(); // Convert to plain JS objects
 
-    res.status(200).json(notifications);
+    // Normalize status (e.g., fix "shipped" → "shipped")
+    const normalizedNotifications = notifications.map(notif => ({
+      ...notif,
+      status: notif.orderId?.status?.toLowerCase().replace(/\s+/g, ''),
+    }));
+
+    res.status(200).json(normalizedNotifications);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch notifications' });
   }
