@@ -178,7 +178,9 @@ function Orders() {
       (order.user?.email?.toLowerCase().includes(searchLower)) ||
       (order.deliveryInfo?.firstName?.toLowerCase().includes(searchLower)) ||
       (order.deliveryInfo?.lastName?.toLowerCase().includes(searchLower)) ||
-      (order.deliveryInfo?.email?.toLowerCase().includes(searchLower))
+      (order.deliveryInfo?.email?.toLowerCase().includes(searchLower))||
+      (order.status?.toLowerCase().includes(searchLower))
+
     );
   });
 
@@ -241,7 +243,7 @@ function Orders() {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Search orders by ID, name, or email..."
+              placeholder="Search orders by ID, name, Status or email..."
               className="w-full p-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchTerm}
               onChange={(e) => {
