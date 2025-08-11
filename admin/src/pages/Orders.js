@@ -234,7 +234,7 @@ function Orders() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 min-h-[60vh]">
       <h1 className="text-2xl font-bold mb-6">Orders Management</h1>
 
       {/* Search and Stats */}

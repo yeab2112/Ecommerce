@@ -18,7 +18,7 @@ function Cart() {
   const totalWithDelivery = parseFloat((cartTotal + delivery_fee).toFixed(2));
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 min-h-[60vh]">
       <h2 className="text-2xl sm:text-3xl font-semibold text-center mb-6">Shopping Cart</h2>
 
       {cart.length === 0 ? (

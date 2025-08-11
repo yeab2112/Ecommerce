@@ -15,7 +15,7 @@ function BestSeller() {
   }, [products, getProducts]);
 
   return (
-    <div className="p-6 bg-gray-300 mx-4">
+    <div className="p-6 bg-gray-300 mx-4 min-h-[60vh]">
       <Title title1="Best" title2="Sellers" />
       <p className="text-lg font-medium text-gray-700 text-center mt-4 mb-6">
         Discover our top-selling products, handpicked for you!

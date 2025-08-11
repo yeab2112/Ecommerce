@@ -24,7 +24,7 @@ const ResetPasswordPage = () => {
     setMessage('');
 
     try {
-      const response = await await axios.post(`https://ecommerce-rho-hazel.vercel.app/api/user/reset-password/${token}`, {
+      const response = await axios.post(`https://ecommerce-rho-hazel.vercel.app/api/user/reset-password/${token}`, {
         password
       });      ;
       

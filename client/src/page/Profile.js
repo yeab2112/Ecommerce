@@ -67,7 +67,7 @@ function Profile() {
   const latestOrder = orders[0] || null;
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
+    <div className="min-h-screen bg-gray-100 py-8 px-4 min-h-[60vh]">
       <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
         <div className="bg-blue-500 py-8 px-6 text-white">
           <h1 className="text-3xl font-bold">My Profile</h1>

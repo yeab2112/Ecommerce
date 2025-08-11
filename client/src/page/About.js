@@ -5,7 +5,7 @@ import Title from '../component/Title';
 
 function About() {
   return (
-    <div className="about-container max-w-6xl mx-auto p-4">
+    <div className="about-container max-w-6xl mx-auto p-4 min-h-[60vh]">
       <Title title1="ABOUT" title2="US"/>    
 
       {/* About Section with Image and Description */}

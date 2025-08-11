@@ -40,7 +40,7 @@ function Collection() {
     });
 
   return (
-    <div className="px-4 py-6 md:px-8">
+    <div className="px-4 py-6 md:px-8 min-h-[60vh]">
       {/* Mobile Header with Filter/Sort */}
       <div className="md:hidden flex items-center justify-between mb-4">
         <button

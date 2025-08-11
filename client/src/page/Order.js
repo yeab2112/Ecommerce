@@ -258,7 +258,7 @@ function OrderConfirmation() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4">
+    <div className="max-w-7xl mx-auto p-4  min-h-[60vh]">
       <h1 className="text-2xl font-bold mb-6">Your Orders</h1>
 
       {/* Confirmation Modal */}
@@ -438,7 +438,7 @@ function OrderConfirmation() {
 
                       <div className="flex items-center justify-end">
                         <p className="font-medium">
-                          {currency}{(product ?.price * product.quantity).toFixed(2)}
+                          {currency}{(product?.price * product.quantity).toFixed(2)}
                         </p>
                       </div>
 

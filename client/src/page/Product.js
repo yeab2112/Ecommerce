@@ -77,7 +77,7 @@ const Product = () => {
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 min-h-[60vh]">
         {[...Array(fullStars)].map((_, i) => (
           <span key={`full-${i}`} className="text-yellow-500 text-xl">★</span>
         ))}

@@ -5,7 +5,7 @@ import contact from '../image/contact.png';
 
 const Contact = () => {
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-16 xl:px-24 py-12 lg:py-20">
+    <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-16 xl:px-24 py-12 lg:py-20 min-h-[60vh]">
       {/* Title */}
       <div className="mb-12 text-center">
         <Title title1="CONTACT" title2="US" />

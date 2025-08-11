@@ -33,7 +33,7 @@ function LatestCollection() {
   }
 
   return (
-    <div className="p-6 bg-gray-100 mx-4">
+    <div className="p-6 bg-gray-100 mx-4 min-h-[60vh]">
       <Title title1="Latest" title2="Collection" />
       <div className="text-center mb-6 text-gray-600">
         <p className="text-lg font-medium text-gray-700 mt-2">

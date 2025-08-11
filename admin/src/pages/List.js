@@ -103,7 +103,7 @@ const List = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 min-h-[60vh]">
       <h1 className="text-2xl md:text-3xl font-bold text-center mb-6">Product List</h1>
 
       {/* Responsive Product List */}
