@@ -23,19 +23,19 @@ function OrderConfirmation() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   // Utility function to handle both product structures
- const getProductData = (product, item) => {
-  return {
-    _id: product?._id || null,
-    name: item?.name || product?.name || 'Unnamed Product',
-    image: item?.image || product?.images?.[0] || '/placeholder-product.jpg',
-    price: item?.price || product?.price || 0,
-    size: item?.size || '',
-    color: item?.color || '',
-    quantity: item?.quantity || 1,
-    reviewed: item?.reviewed || false,
-    review: item?.review || null
+  const getProductData = (product, item) => {
+    return {
+      _id: product?._id || null,
+      name: item?.name || product?.name || 'Unnamed Product',
+      image: item?.image || product?.images?.[0] || '/placeholder-product.jpg',
+      price: item?.price || product?.price || 0,
+      size: item?.size || '',
+      color: item?.color || '',
+      quantity: item?.quantity || 1,
+      reviewed: item?.reviewed || false,
+      review: item?.review || null
+    };
   };
-};
 
   useEffect(() => {
     const fetchUserOrders = async () => {
@@ -154,17 +154,17 @@ function OrderConfirmation() {
   };
 
   const handleSubmitReview = async () => {
-  if (!currentReviewProduct || !currentOrderId) {
-    toast.error('Missing required review information');
-    return;
-  }
- const product = getProductData(currentReviewProduct);
-  const productId = product._id;
-  if (!productId) {
-    console.error('Product ID not found in:', currentReviewProduct);
-    toast.error('Could not identify the product to review');
-    return;
-  }
+    if (!currentReviewProduct || !currentOrderId) {
+      toast.error('Missing required review information');
+      return;
+    }
+    const product = getProductData(currentReviewProduct);
+    const productId = product._id;
+    if (!productId) {
+      console.error('Product ID not found in:', currentReviewProduct);
+      toast.error('Could not identify the product to review');
+      return;
+    }
     setIsSubmittingReview(true);
 
     try {
@@ -192,7 +192,7 @@ function OrderConfirmation() {
         setReviewText('');
         setReviewRating(5);
         setCurrentReviewProduct(null);
-        
+
         setOrders(prev => prev.map(order => {
           if (order._id === currentOrderId) {
             return {
@@ -200,8 +200,8 @@ function OrderConfirmation() {
               items: order.items.map(item => {
                 const itemProduct = getProductData(item.product);
                 if (itemProduct?._id === productId) {
-                  return { 
-                    ...item, 
+                  return {
+                    ...item,
                     reviewed: true,
                     review: {
                       rating: reviewRating,
@@ -328,7 +328,7 @@ function OrderConfirmation() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
             <h3 className="text-lg font-bold mb-4">Review {getProductData(currentReviewProduct)?.name}</h3>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
               <div className="flex items-center">
@@ -402,11 +402,9 @@ function OrderConfirmation() {
               </div>
 
               <div className="divide-y">
-               {order.items.map((item) => {
- const product = getProductData(item.product,item);
-  const productId = product._id;
-  
-                  
+                {order.items.map((item) => {
+                  const product = getProductData(item.product, item);
+                  const productId = product._id;
                   return (
                     <div key={`${order._id}-${productId}`} className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="flex items-center col-span-2">
